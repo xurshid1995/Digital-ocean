@@ -1081,7 +1081,10 @@ function savePageState() {
     const statisticsTableBody = document.getElementById('statisticsTableBody');
     const checkedProducts = [];
     if (statisticsTableBody && statisticsTableBody.children.length > 0) {
-        for (let row of statisticsTableBody.children) {
+        // Teskari tartibda o'qish (yangi qo'shilganlar array oxirida bo'ladi)
+        const rows = Array.from(statisticsTableBody.children);
+        for (let i = rows.length - 1; i >= 0; i--) {
+            const row = rows[i];
             if (row.children.length >= 6) { // 6 ta ustun bor endi
                 checkedProducts.push({
                     id: row.dataset.productId, // Mahsulot ID sini saqlash
@@ -1218,7 +1221,10 @@ function getCheckedProductsData() {
     const statisticsTableBody = document.getElementById('statisticsTableBody');
     const checkedProducts = [];
     if (statisticsTableBody && statisticsTableBody.children.length > 0) {
-        for (let row of statisticsTableBody.children) {
+        // Teskari tartibda o'qish (yangi qo'shilganlar array oxirida bo'ladi)
+        const rows = Array.from(statisticsTableBody.children);
+        for (let i = rows.length - 1; i >= 0; i--) {
+            const row = rows[i];
             if (row.children.length >= 6) {
                 checkedProducts.push({
                     id: row.dataset.productId,
