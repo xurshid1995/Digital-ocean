@@ -3910,8 +3910,14 @@ def delete_user(user_id):
     try:
         user = User.query.get_or_404(user_id)
 
+        # Foydalanuvchiga tegishli stock check sessions'larini o'chirish
+        StockCheckSession.query.filter_by(user_id=user_id).delete()
+        
+        # Foydalanuvchini o'chirish
         db.session.delete(user)
         db.session.commit()
+
+        app.logger.info(f"✅ User {user_id} va uning barcha stock check sessions'lari o'chirildi")
 
         return jsonify({
             'success': True,
