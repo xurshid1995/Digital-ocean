@@ -1067,12 +1067,21 @@ function savePageState() {
     
     // Local da saqlash (tez)
     localStorage.setItem('stockCheckState', JSON.stringify(pageState));
-    console.log(`   💾 localStorage'ga saqlandi (${JSON.stringify(pageState).length} bytes)`);
+    const dataSize = JSON.stringify(pageState).length;
+    const dataSizeKB = (dataSize / 1024).toFixed(2);
+    console.log(`   💾 localStorage'ga saqlandi:`);
+    console.log(`      └─ Hajm: ${dataSize} bytes (${dataSizeKB} KB)`);
+    console.log(`      └─ Joy: Browser localStorage (offline ishlaydi)`);
+    console.log(`      └─ Key: "stockCheckState"`);
     
     // Server-da ham saqlash (debounced) - barcha qurilmalar uchun
     if (pageState.isCheckingActive && pageState.selectedLocation) {
         debouncedServerSave(pageState);
-        console.log(`   🌐 Server'ga yuborish rejalashtirildi`);
+        console.log(`   🌐 Server'ga yuborish rejalashtirildi:`);
+        console.log(`      └─ URL: /api/stock-check-session/save`);
+        console.log(`      └─ Database: PostgreSQL (dokon_db)`);
+        console.log(`      └─ Jadval: stock_check_sessions`);
+        console.log(`      └─ Maqsad: Barcha qurilmalarda sinxronlash`);
     }
     
     console.log(`✅ [${timestamp}] savePageState() tugadi`);
@@ -1251,16 +1260,21 @@ let serverSaveTimeout = null;
 
 // Debounced server save
 function debouncedServerSave(pageState, immediate = false) {
+    const timestamp = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 });
+    
     // Oldingi timer ni bekor qilish
     if (serverSaveTimeout) {
         clearTimeout(serverSaveTimeout);
+        console.log(`   ⏹️ [${timestamp}] Oldingi server save timer bekor qilindi`);
     }
     
     if (immediate) {
         // Darhol saqlash
+        console.log(`   ⚡ [${timestamp}] Server'ga DARHOL yuborilmoqda...`);
         saveToServer(pageState);
     } else {
         // 3 soniya kutish (server save uchun)
+        console.log(`   ⏳ [${timestamp}] Server'ga 3 soniyadan keyin yuboriladi (debounce)`);
         serverSaveTimeout = setTimeout(() => {
             saveToServer(pageState);
         }, 3000);
@@ -1269,7 +1283,9 @@ function debouncedServerSave(pageState, immediate = false) {
 
 // Server-da holatni saqlash
 async function saveToServer(pageState) {
-    // Server-ga saqlash
+    const startTime = new Date();
+    const timestamp = startTime.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 });
+    console.log(`\n🌐 [${timestamp}] ========== SERVER'GA SAQLASH BOSHLANDI ==========`);
     
     try {
         const selectedLocation = pageState.selectedLocation;
@@ -1295,11 +1311,16 @@ async function saveToServer(pageState) {
             location_type = 'all';
         }
         
+        console.log(`   📍 Joylashuv: ${location_type}_${location_id}`);
+        console.log(`   📦 Ma'lumot hajmi: ${JSON.stringify(pageState).length} bytes`);
+        
         const requestData = {
             session_data: pageState,
             location_type: location_type,
             location_id: location_id
         };
+        
+        console.log(`   🚀 POST so'rov yuborilmoqda: /api/stock-check-session/save`);
         
         const response = await fetch('/api/stock-check-session/save', {
             method: 'POST',
@@ -1314,6 +1335,9 @@ async function saveToServer(pageState) {
         });
         
         const result = await response.json();
+        const endTime = new Date();
+        const duration = endTime - startTime;
+        
         if (response.status === 403) {
             // Access denied - foydalanuvchiga tushunarli xabar
             console.error('🚫 Access denied:', result.error);
@@ -1324,15 +1348,22 @@ async function saveToServer(pageState) {
             return;
         } else if (result.success) {
             // Server-da saqlandi
+            console.log(`   ✅ Server javob berdi: SUCCESS`);
+            console.log(`   ⏱️ Davomiyligi: ${duration}ms`);
+            console.log(`   💾 Saqlangan joy: PostgreSQL database`);
+            console.log(`   📊 Jadval: stock_check_sessions`);
+            console.log(`========== SERVER'GA SAQLASH TUGADI ==========\n`);
         } else {
             console.warn('⚠️ Server-da saqlashda muammo:', result.error);
         }
     } catch (error) {
+        const endTime = new Date();
+        const duration = endTime - startTime;
         console.error('❌ Server-da saqlashda xatolik:', error);
         console.error('🔍 Error details:', error.message);
+        console.error(`⏱️ Xatolik yuz berguncha: ${duration}ms`);
+        console.log(`========== SERVER'GA SAQLASH XATOLIK BILAN TUGADI ==========\n`);
     }
-    
-
 }
 
 // Server-dan holatni yuklash
