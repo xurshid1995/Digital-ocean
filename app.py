@@ -2784,10 +2784,7 @@ def edit_store_stock(store_id, product_id):
         store_id=store_id,
         product_id=product_id
     ).first_or_404()
-    print(
-        f"🔍 DEBUG: Stock found: {
-            stock.product.name}, quantity: {
-            stock.quantity}")
+    print(f"🔍 DEBUG: Stock found: {stock.product.name}, quantity: {stock.quantity}")
 
     # Hisob-kitoblar - to'g'ri cost_price va sell_price dan
     cost_price = stock.product.cost_price
