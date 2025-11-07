@@ -147,28 +147,28 @@ body {
 }
 
 .sidebar-menu a.active {
-    background: linear-gradient(135deg, rgba(52, 152, 219, 0.15), rgba(46, 204, 113, 0.1));
-    color: #3498db;
-    border-left-color: #3498db;
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.3), rgba(255, 255, 255, 0.15));
+    color: #ffffff;
+    border-left-color: #ffffff;
     font-weight: 600;
-    box-shadow: inset 0 0 20px rgba(52, 152, 219, 0.1);
+    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.2);
 }
 
 /* Aktiv elementda chiziqlar doimiy ko'rinadi */
 .sidebar-menu a.active::before {
     transform: translateX(0);
-    background: linear-gradient(90deg, #3498db, #2ecc71);
+    background: linear-gradient(90deg, #ffffff, rgba(255, 255, 255, 0.5));
 }
 
 .sidebar-menu a.active::after {
     transform: translateX(0);
-    background: linear-gradient(90deg, #2ecc71, #3498db);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.5), #ffffff);
 }
 
 /* Aktiv icon animatsiya */
 .sidebar-menu a.active .icon {
     transform: scale(1.15);
-    filter: drop-shadow(0 0 8px rgba(52, 152, 219, 0.6));
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
     animation: iconPulse 2s ease-in-out infinite;
 }
 
