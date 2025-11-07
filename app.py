@@ -392,10 +392,7 @@ class StoreStock(db.Model):
     product = db.relationship('Product', overlaps="store_stocks")
 
     def __repr__(self):
-        return f'<StoreStock S:{
-            self.store_id} P:{
-            self.product_id} Q:{
-            self.quantity}>'
+        return f'<StoreStock S:{self.store_id} P:{self.product_id} Q:{self.quantity}>'
 
     @property
     def purchase_price(self):
