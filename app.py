@@ -4788,9 +4788,7 @@ def create_sale():
             # Location ma'lumotini yaratish
             if item_location_type == 'warehouse':
                 warehouse_obj = Warehouse.query.get(item_location_id)
-                location_info = f'Ombor: {
-                    warehouse_obj.name} (ID: {
-                    warehouse_obj.id})'
+                location_info = f'Ombor: {warehouse_obj.name} (ID: {warehouse_obj.id})'
             else:
                 store_obj = Store.query.get(item_location_id)
                 location_info = f'Dokon: {store_obj.name} (ID: {store_obj.id})'
