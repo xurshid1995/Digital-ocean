@@ -557,6 +557,10 @@
                 return response.json();
             })
             .then(user => {
+                console.log('🌟 API RESPONSE - Full user data:', JSON.stringify(user, null, 2));
+                console.log('🌟 Permissions:', user.permissions);
+                console.log('🌟 Allowed locations:', user.allowed_locations);
+                console.log('🌟 Transfer locations:', user.transfer_locations);
                 currentUser = user;
                 populateForm(user);
                 document.getElementById('loadingState').style.display = 'none';
@@ -622,9 +626,9 @@
             }
         }
         
-        // Transfer qilish huquqi
-        if (permissions.can_transfer) {
-            console.log('✅ Setting can_transfer to true');
+        // Transfer qilish huquqi - 'can_transfer' yoki 'transfer' kalitini tekshirish
+        if (permissions.can_transfer || permissions.transfer) {
+            console.log('✅ Setting can_transfer to true (can_transfer:', permissions.can_transfer, ', transfer:', permissions.transfer, ')');
             document.getElementById('canTransfer').checked = true;
             toggleTransferLocations();
             
