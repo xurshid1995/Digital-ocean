@@ -2236,9 +2236,7 @@ def api_warehouses():
         if current_user.role == 'admin':
             # Admin hamma omborlarni ko'radi
             warehouses_list = Warehouse.query.all()
-            print(
-                f"🔍 Admin user, returning all {
-                    len(warehouses_list)} warehouses")
+            print(f"🔍 Admin user, returning all {len(warehouses_list)} warehouses")
         else:
             # Oddiy foydalanuvchilar faqat allowed_locations dan ruxsat etilgan
             # omborlarni ko'radi (savdo uchun)
