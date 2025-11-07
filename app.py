@@ -668,34 +668,32 @@ class StockCheckSession(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    session_key = db.Column(db.String(100), unique=True, nullable=False)
-    location_type = db.Column(db.String(20))  # 'store', 'warehouse', 'all'
-    location_id = db.Column(db.Integer)  # Store yoki Warehouse ID
-    is_active = db.Column(db.Boolean, default=True)
-    session_data = db.Column(db.Text)  # JSON format
-    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    location_id = db.Column(db.Integer, nullable=False)
+    location_type = db.Column(db.String(20), nullable=False)  # 'store' or 'warehouse'
+    location_name = db.Column(db.String(200))
+    started_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(
         db.DateTime,
         default=db.func.current_timestamp(),
         onupdate=db.func.current_timestamp())
+    status = db.Column(db.String(20), default='active')  # 'active', 'completed', 'cancelled'
 
     # Relationships
     user = db.relationship('User', backref='stock_check_sessions')
 
     def __repr__(self):
-        return f'<StockCheckSession {self.session_key} - User: {self.user_id}>'
+        return f'<StockCheckSession {self.location_type}-{self.location_id} - User: {self.user_id}>'
 
     def to_dict(self):
         return {
             'id': self.id,
             'user_id': self.user_id,
-            'session_key': self.session_key,
-            'location_type': self.location_type,
             'location_id': self.location_id,
-            'is_active': self.is_active,
-            'session_data': self.session_data,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'location_type': self.location_type,
+            'location_name': self.location_name,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'status': self.status,
         }
 
 
@@ -7178,7 +7176,7 @@ def load_stock_check_session():
         # Active session'ni topish
         active_session = StockCheckSession.query.filter_by(
             user_id=user_id,
-            is_active=True
+            status='active'
         ).order_by(StockCheckSession.updated_at.desc()).first()
 
         if not active_session:
@@ -7188,51 +7186,17 @@ def load_stock_check_session():
                 'message': 'Active session topilmadi'
             })
 
-        logger.info(f" Active session topildi: {active_session.session_key}")
+        logger.info(f" Active session topildi: {active_session.location_type}-{active_session.location_id}")
         print(f"📍 Location: {active_session.location_type}-{active_session.location_id}")
         print(f"🕐 Updated at: {active_session.updated_at}")
 
-        # Location permission validation
-        user = User.query.get(user_id)
-        if not user:
-            logger.error(" User not found")
-            return jsonify({'error': 'User not found'}), 404
-
-        # Session location access huquqini tekshirish
-        if active_session.location_type and active_session.location_id:
-            if user.role == 'admin':
-                print("✅ Admin user - session access granted")
-            else:
-                # allowed_locations orqali session access'ni tekshirish
-                allowed_locations = user.allowed_locations or []
-
-                if active_session.location_id not in allowed_locations:
-                    logger.error(f" Session access denied - User allowed locations: {allowed_locations}, Session location: {active_session.location_id}")
-                    # Session'ni deactivate qilish (xavfsizlik uchun)
-                    active_session.is_active = False
-                    db.session.commit()
-                    return jsonify({
-                        'error': 'Bu session sizga tegishli emas',
-                        'session_deactivated': True
-                    }), 403
-                logger.info(f" Session access granted for {active_session.location_type} {active_session.location_id}")
-        elif active_session.location_type == 'all':
-            print("✅ Session access granted for all locations")
-
         # Session ma'lumotlarini qaytarish
-        import json
-        session_data = {}
-        if active_session.session_data:
-            session_data = json.loads(active_session.session_data)
-            logger.info(f" Session data keys: {list(session_data.keys())}")
-            logger.info(f" Session data size: {len(active_session.session_data)} bytes")
-
         result = {
             'success': True,
-            'session_key': active_session.session_key,
             'location_type': active_session.location_type,
             'location_id': active_session.location_id,
-            'session_data': session_data,
+            'location_name': active_session.location_name,
+            'session_data': {},  # Eski session_data field'i hozir ishlatilmaydi
             'updated_at': active_session.updated_at.isoformat()
         }
 
@@ -7254,11 +7218,11 @@ def clear_stock_check_session():
         if not user_id:
             return jsonify({'error': 'User not authenticated'}), 401
 
-        # User ning barcha active session'larini deaktiv qilish
+        # User ning barcha active session'larini cancelled qilish
         StockCheckSession.query.filter_by(
             user_id=user_id,
-            is_active=True
-        ).update({'is_active': False})
+            status='active'
+        ).update({'status': 'cancelled'})
 
         db.session.commit()
 
