@@ -330,6 +330,7 @@
 <script>
     let allUsers = [];
     let editingUserId = null;
+    let currentUserId = null; // Hozirgi login qilgan foydalanuvchi ID
 
     document.addEventListener('DOMContentLoaded', function() {
         loadUsers();
@@ -341,7 +342,8 @@
         try {
             const res = await fetch('/api/users');
             const data = await res.json();
-            allUsers = data;
+            allUsers = data.users || data; // Yangi format yoki eski format
+            currentUserId = data.current_user_id; // Hozirgi foydalanuvchi ID
             displayUsers();
         } catch (e) { console.error('Users load error', e); showError('Foydalanuvchilarni yuklashda xatolik'); }
     }
@@ -377,6 +379,9 @@
             const isActiveIcon = u.is_active ? '✅ Faol' : '❌ Faol emas';
             const safeName = u.full_name.replace(/'/g, '');
             
+            // Hozirgi foydalanuvchi o'zini o'chira/faol emas qila olmasligi kerak
+            const isCurrentUser = currentUserId && u.id === currentUserId;
+            
             // Desktop table row
             tableHtml += `<tr>
                 <td title="${storeName}">${storeName}</td>
@@ -389,11 +394,13 @@
                 <td title="${created}">${created}</td>
                 <td class="actions">
                     <button onclick="editUser(${u.id})" title="Tahrirlash">✏️</button>
+                    ${!isCurrentUser ? `
                     <button onclick="toggleUserStatus(${u.id}, '${safeName}', ${u.is_active})" 
                             title="${u.is_active ? 'Faol emas qilish' : 'Faol qilish'}">
                         ${u.is_active ? '❌' : '✅'}
                     </button>
                     <button onclick="confirmDeleteUser(${u.id}, '${safeName}')" title="Ochirish">🗑️</button>
+                    ` : '<span style="color: #6c757d; font-size: 0.9em;">O\'z akkauntingiz</span>'}
                 </td>
             </tr>`;
             
@@ -432,11 +439,13 @@
                     </div>
                     <div class="user-actions">
                         <button onclick="editUser(${u.id})" class="btn-edit">✏️ Tahrirlash</button>
+                        ${!isCurrentUser ? `
                         <button onclick="toggleUserStatus(${u.id}, '${safeName}', ${u.is_active})" 
                                 class="btn-toggle">
                             ${u.is_active ? '❌ Faol emas qilish' : '✅ Faol qilish'}
                         </button>
                         <button onclick="confirmDeleteUser(${u.id}, '${safeName}')" class="btn-delete">🗑️ Ochirish</button>
+                        ` : '<div style="text-align:center; color: #6c757d; padding: 10px; font-size: 0.95em;">O\'z akkauntingiz</div>'}
                     </div>
                 </div>
             `;

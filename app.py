@@ -3830,8 +3830,14 @@ def get_users():
     try:
         # Barcha foydalanuvchilarni olish (dokon nomi bilan birga)
         users = User.query.all()
+        
+        # Hozirgi foydalanuvchi ID sini ham yuborish
+        current_user_id = session.get('user_id')
 
-        return jsonify([user.to_dict() for user in users])
+        return jsonify({
+            'users': [user.to_dict() for user in users],
+            'current_user_id': current_user_id
+        })
     except Exception as e:
         app.logger.error(f"Error fetching users: {str(e)}")
         return jsonify({'error': str(e)}), 500
