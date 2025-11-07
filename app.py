@@ -3319,16 +3319,26 @@ def process_transfers():
         if current_user.role == 'sotuvchi':
             # Transfer huquqi tekshirish
             permissions = current_user.permissions or {}
-            if not permissions.get('transfer', False):
+            has_transfer_permission = permissions.get('transfer', False)
+            
+            # Agar transfer huquqi yo'q bo'lsa, xatolik qaytarish
+            if not has_transfer_permission:
                 print(
                     f"❌ User {current_user.username} has no transfer permission")
                 return jsonify(
                     {'error': 'Transfer qilish huquqingiz yo\'q'}), 403
 
-            # Transfer joylashuvlari tekshirish
+            # Transfer joylashuvlari - agar bo'sh bo'lsa, allowed_locations dan foydalanish
             transfer_locations = current_user.transfer_locations or []
+            
+            # Agar transfer_locations bo'sh bo'lsa, allowed_locations dan foydalanish
+            if not transfer_locations:
+                transfer_locations = current_user.allowed_locations or []
+                print(f"ℹ️ Transfer locations bo'sh, allowed_locations ishlatilmoqda: {transfer_locations}")
+            
             logger.debug(f" User transfer locations: {transfer_locations}")
 
+            # Agar ikkala list ham bo'sh bo'lsa, faqat o'shanda xatolik qaytarish
             if not transfer_locations:
                 print(
                     f"❌ User {current_user.username} has no transfer locations")
@@ -3358,8 +3368,13 @@ def process_transfers():
                 from_type, from_id = from_location.split('_')
                 from_location_id = int(from_id)
 
+                # Transfer_locations yoki allowed_locations dan foydalanish
                 transfer_locations = current_user.transfer_locations or []
-                if from_location_id not in transfer_locations:
+                if not transfer_locations:
+                    transfer_locations = current_user.allowed_locations or []
+                
+                # Agar hali ham bo'sh bo'lsa, faqat o'shanda xatolik
+                if transfer_locations and from_location_id not in transfer_locations:
                     print(
                         f"❌ User {current_user.username} cannot transfer from location {from_location_id}")
                     return jsonify({
