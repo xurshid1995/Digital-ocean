@@ -4975,7 +4975,8 @@ def update_sale(sale_id):
                 new_quantities[key] = new_quantities.get(key, 0) + quantity
 
                 # Yangi SaleItem yaratish
-                source_name = f"{'Ombor' if location_type == 'warehouse' else 'Do\'kon'} (ID: {location_id})"
+                loc_name = 'Ombor' if location_type == 'warehouse' else "Do'kon"
+                source_name = f"{loc_name} (ID: {location_id})"
                 sale_item = SaleItem(
                     sale_id=sale.id,
                     product_id=product.id,
