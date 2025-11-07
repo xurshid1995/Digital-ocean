@@ -205,8 +205,17 @@ def extract_location_ids(locations, location_type):
 
     # Eski format (ID'lar ro'yxati) tekshirish
     if isinstance(locations[0], int):
-        # Eski format: [1, 2, 3] - barcha ID'larni qaytarish
-        return locations
+        # Eski format: [1, 2, 3]
+        # Type bo'yicha filtrlash uchun ma'lumotlar bazasidan tekshirish kerak
+        
+        if location_type == 'store':
+            # Faqat store ID'larni olish
+            existing_store_ids = [s.id for s in Store.query.filter(Store.id.in_(locations)).all()]
+            return existing_store_ids
+        else:  # warehouse
+            # Faqat warehouse ID'larni olish
+            existing_warehouse_ids = [w.id for w in Warehouse.query.filter(Warehouse.id.in_(locations)).all()]
+            return existing_warehouse_ids
 
     # Yangi format: [{'id': 1, 'type': 'store'}, {'id': 2, 'type':
     # 'warehouse'}]
