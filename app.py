@@ -5918,11 +5918,7 @@ def add_currency_column():
         """), {'rate': current_rate})
         db.session.commit()
 
-        return jsonify(
-            {
-                'success': True,
-                'message': f'currency_rate column added and {
-                    result.rowcount} sales updated with rate {current_rate}'})
+        return jsonify({'success': True, 'message': f'currency_rate column added and {result.rowcount} sales updated with rate {current_rate}'})
 
     except Exception as e:
         db.session.rollback()
