@@ -133,7 +133,7 @@ body {
 
 .sidebar-menu a:hover {
     background: rgba(52, 73, 94, 0.8);
-    color: #ecf0f1;
+    color: #ffffff;
     border-left-color: #3498db;
     transform: translateX(5px);
 }
