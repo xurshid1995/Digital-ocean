@@ -1556,10 +1556,7 @@ def search_product(product_name):
             ).all()
             logger.debug(f" Ombor stock'lari topildi: {len(warehouse_stocks)}")
             for stock in warehouse_stocks:
-                print(
-                    f"   Ombor ID: {
-                        stock.warehouse_id}, Miqdor: {
-                        stock.quantity}")
+                print(f"   Ombor ID: {stock.warehouse_id}, Miqdor: {stock.quantity}")
                 # Miqdori nol bo'lgan omborlar ham ko'rsatiladi
                 locations.append({
                     'type': 'warehouse',
@@ -1574,10 +1571,7 @@ def search_product(product_name):
                 product_id=product.id).all()
             logger.debug(f" Dokon stock'lari topildi: {len(store_stocks)}")
             for stock in store_stocks:
-                print(
-                    f"   Dokon ID: {
-                        stock.store_id}, Miqdor: {
-                        stock.quantity}")
+                print(f"   Dokon ID: {stock.store_id}, Miqdor: {stock.quantity}")
                 # Miqdori nol bo'lgan dokonlar ham ko'rsatiladi
                 locations.append({
                     'type': 'store',
