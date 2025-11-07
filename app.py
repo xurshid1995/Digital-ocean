@@ -352,10 +352,7 @@ class WarehouseStock(db.Model):
     product = db.relationship('Product', overlaps="warehouse_stocks")
 
     def __repr__(self):
-        return f'<Stock W:{
-            self.warehouse_id} P:{
-            self.product_id} Q:{
-            self.quantity}>'
+        return f'<Stock W:{self.warehouse_id} P:{self.product_id} Q:{self.quantity}>'
 
     @property
     def purchase_price(self):
@@ -442,10 +439,7 @@ class Transfer(db.Model):
     product = db.relationship('Product', backref='transfers')
 
     def __repr__(self):
-        return f'<Transfer {
-            self.id}: {
-            self.product.name if self.product else "N/A"} {
-            self.quantity}>'
+        return f'<Transfer {self.id}: {self.product.name if self.product else "N/A"} {self.quantity}>'
 
     @property
     def from_location_name(self):
