@@ -3617,11 +3617,19 @@ def get_customers():
             logger.debug(f" Filtering customers by locations: {allowed_locations}")
 
             if allowed_locations:
-                # Faqat ruxsat berilgan do'konlardagi mijozlar
-                customers = Customer.query.filter(
-                    Customer.store_id.in_(allowed_locations)).all()
-                print(
-                    f"🔍 Found {len(customers)} customers in allowed locations")
+                # Faqat store ID'larni olish (mijozlar faqat do'konlarda bo'ladi)
+                allowed_store_ids = extract_location_ids(allowed_locations, 'store')
+                print(f"🔍 Allowed store IDs for customers: {allowed_store_ids}")
+                
+                if allowed_store_ids:
+                    # Faqat ruxsat berilgan do'konlardagi mijozlar
+                    customers = Customer.query.filter(
+                        Customer.store_id.in_(allowed_store_ids)).all()
+                    print(
+                        f"🔍 Found {len(customers)} customers in allowed stores")
+                else:
+                    customers = []
+                    print("🔍 No allowed stores for this user")
             else:
                 # Agar ruxsat berilgan joylashuv bo'lmasa, bo'sh ro'yxat
                 customers = []
