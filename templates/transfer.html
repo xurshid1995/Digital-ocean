@@ -995,7 +995,7 @@
 
         // Mahsulot qidiruv - faqat tanlangan joydagi mahsulotlarni ko'rsatish
         async function searchProducts() {
-            const query = document.getElementById('product_search').value.toLowerCase();
+            const query = document.getElementById('product_search').value.trim();
             const searchResults = document.getElementById('searchResults');
             const fromLocation = document.getElementById('from_location').value;
             
@@ -1014,53 +1014,57 @@
                 return;
             }
 
-            // productsData array ekanligini tekshirish
-            if (!Array.isArray(productsData)) {
-                console.error('productsData array emas:', productsData);
-                searchResults.innerHTML = '<div class="search-item">❌ Mahsulotlar yuklanmagan</div>';
-                searchResults.style.display = 'block';
-                return;
-            }
+            // Loading ko'rsatish
+            searchResults.innerHTML = '<div class="search-item">⏳ Qidirilmoqda...</div>';
+            searchResults.style.display = 'block';
 
-            const filteredProducts = productsData.filter(product => 
-                product.name.toLowerCase().includes(query)
-            );
+            try {
+                // API'dan to'g'ridan qidirish - location va search parametrlari bilan
+                const apiUrl = `/api/products?search=${encodeURIComponent(query)}&location=${encodeURIComponent(fromLocation)}&per_page=50`;
+                console.log('API so\'rov yuborilmoqda:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`API xatolik: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const filteredProducts = data.products || data || [];
+                console.log(`API javob: ${filteredProducts.length} ta mahsulot topildi`);
 
-            if (filteredProducts.length > 0) {
-                // Avval umumiy natijalarni ko'rsatish (tez loading uchun)
-                let resultsHtml = '';
-                filteredProducts.forEach((product, index) => {
-                    const price = product.sell_price || product.price || 0;
-                    let stockStatus = '📍 Avval joyni tanlang';
-                    let stockClass = 'stock-no-location';
-                    
-                    if (fromLocation) {
-                        stockStatus = '📊 Miqdor tekshirilmoqda...';
-                        stockClass = 'stock-loading';
-                    }
-                    
-                    resultsHtml += `
-                        <div class="search-item" data-index="${index}" data-product-id="${product.id}" onclick="selectProduct(${product.id}, '${product.name}')">
-                            <div class="search-item-details">
-                                <div class="search-item-info">
-                                    <div class="search-item-name">📦 ${product.name}</div>
-                                    <div class="search-item-price">💰 $${parseFloat(price).toFixed(2)}</div>
-                                    <div class="search-item-stock ${stockClass}">${stockStatus}</div>
+                if (filteredProducts.length > 0) {
+                    // Mahsulotlarni ko'rsatish
+                    let resultsHtml = '';
+                    filteredProducts.forEach((product, index) => {
+                        const price = product.sell_price || product.price || 0;
+                        let stockStatus = '📊 Miqdor tekshirilmoqda...';
+                        let stockClass = 'stock-loading';
+                        
+                        resultsHtml += `
+                            <div class="search-item" data-index="${index}" data-product-id="${product.id}" onclick="selectProduct(${product.id}, '${product.name}')">
+                                <div class="search-item-details">
+                                    <div class="search-item-info">
+                                        <div class="search-item-name">📦 ${product.name}</div>
+                                        <div class="search-item-price">💰 $${parseFloat(price).toFixed(2)}</div>
+                                        <div class="search-item-stock ${stockClass}">${stockStatus}</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `;
-                });
-                
-                searchResults.innerHTML = resultsHtml;
-                searchResults.style.display = 'block';
-                
-                // Agar "Qayerdan" tanlangan bo'lsa, har bir mahsulot uchun miqdorni yangilash
-                if (fromLocation) {
+                        `;
+                    });
+                    
+                    searchResults.innerHTML = resultsHtml;
+                    searchResults.style.display = 'block';
+                    
+                    // Har bir mahsulot uchun miqdorni yangilash
                     updateProductQuantities(filteredProducts, fromLocation);
+                } else {
+                    searchResults.innerHTML = '<div class="search-item">🔍 Hech qanday mahsulot topilmadi</div>';
+                    searchResults.style.display = 'block';
                 }
-            } else {
-                searchResults.innerHTML = '<div class="search-item">🔍 Hech qanday mahsulot topilmadi</div>';
+            } catch (error) {
+                console.error('Qidiruv xatoligi:', error);
+                searchResults.innerHTML = '<div class="search-item">❌ Xatolik yuz berdi. Qaytadan urinib ko\'ring.</div>';
                 searchResults.style.display = 'block';
             }
         }
