@@ -4306,7 +4306,7 @@
     }
 
     // Mobile cart uchun miqdorni o'zgartirish
-    function adjustQuantity(productId, change, tabId) {
+    async function adjustQuantity(productId, change, tabId) {
         const currentTabId = tabId || activeTabId;
         if (!currentTabId) return;
         
@@ -4316,13 +4316,21 @@
         const item = tabData.cart.find(item => item.id === productId);
         if (!item) return;
         
+        // 🔒 Lock tekshiruvi - agar update davom etayotgan bo'lsa, skip qilish
+        const lockKey = `${currentTabId}_${productId}`;
+        if (quantityUpdateLocks[lockKey]) {
+            console.log(`⏸️ adjustQuantity: Lock aktiv, o'zgarish skip qilindi`);
+            return;
+        }
+        
         const newQuantity = parseInt(item.quantity) + parseInt(change);
         if (newQuantity <= 0) {
             removeFromCart(productId, currentTabId);
             return;
         }
         
-        setQuantityAsync(productId, newQuantity, currentTabId);
+        // ✅ await bilan kutish
+        await setQuantityAsync(productId, newQuantity, currentTabId);
     }
 
 
