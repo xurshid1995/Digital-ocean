@@ -4241,19 +4241,11 @@
         if (item) {
             const oldQuantity = item.quantity;
             
-            // Tahrirlash rejimida asl miqdor bilan solishtirish
-            // originalQuantities ni xavfsiz tarzda tekshirish
-            if (!tabData.originalQuantities) {
-                tabData.originalQuantities = {};
-            }
-            const originalQuantity = tabData.originalQuantities[productId] || 0;
-            const oldDifference = oldQuantity - originalQuantity; // Asl miqdordan eski farq
-            const newDifference = quantity - originalQuantity; // Asl miqdordan yangi farq
-            const stockChange = newDifference - oldDifference; // Stock'da bo'ladigan o'zgarish
+            // ✅ ODDIY MANTIQ: Har doim hozirgi miqdor bilan yangi miqdorni solishtirish
+            const stockChange = quantity - oldQuantity; // Farq: musbat = qo'shish, manfiy = qaytarish
             
             console.log(`🔄 Miqdor o'zgartirish: ${item.name} (Product ID: ${productId})`);
-            console.log(`   originalQuantities[${productId}] = ${tabData.originalQuantities[productId]}`);
-            console.log(`   Asl miqdor: ${originalQuantity}, Eski: ${oldQuantity}, Yangi: ${quantity}`);
+            console.log(`   Hozirgi: ${oldQuantity}, Yangi: ${quantity}`);
             console.log(`   Stock o'zgarishi: ${stockChange} (${stockChange > 0 ? 'qo\'shimcha kerak' : stockChange < 0 ? 'qaytarish kerak' : 'o\'zgarish yo\'q'})`);
             
             // Tahrirlash yuklanayotganda stock operatsiyalarini skip qilish
@@ -4499,17 +4491,15 @@
         if (item.quantity !== newQuantity) {
             const oldQuantity = item.quantity;
             console.log(`📝 Edit card: Miqdorni yangilash ${oldQuantity} → ${newQuantity}`);
+            console.log(`📊 originalQuantities[${productId}] = ${tabData.originalQuantities[productId]}`);
             
             // setQuantityAsync orqali yangilash - bu avtomatik stock boshqaruvini amalga oshiradi
             await setQuantityAsync(productId, newQuantity, currentTabId);
             
-            // ✅ MUHIM: originalQuantities ni yangilash
-            // Edit orqali o'zgartirilgandan keyin, bu yangi miqdor "asl" miqdor bo'ladi
-            if (tabData.isEditMode && tabData.originalQuantities) {
-                const oldOriginal = tabData.originalQuantities[productId];
-                tabData.originalQuantities[productId] = newQuantity;
-                console.log(`✅ originalQuantities yangilandi: ${oldOriginal} → ${newQuantity}`);
-            }
+            // ⚠️ DIQQAT: originalQuantities FAQAT loadSaleForEdit da set qilinadi
+            // Edit card orqali o'zgartirishda bu o'zgarmasligi kerak
+            // Chunki originalQuantities - bu DB dagi asl miqdor, edit card esa faqat UI o'zgarishi
+            console.log(`✅ Miqdor yangilandi, originalQuantities o'zgarmadi: ${tabData.originalQuantities[productId]}`);
         } else {
             // Faqat narx o'zgardi, korzinani yangilash
             updateCart(currentTabId);
