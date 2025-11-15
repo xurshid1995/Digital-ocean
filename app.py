@@ -5144,19 +5144,50 @@ def create_sale():
         new_sale.total_cost = Decimal(str(total_cost))
         new_sale.total_profit = Decimal(str(total_profit))
 
-        # Tahrirlash rejimida asl tasdiqlanmagan savdoni o'chirish
+        # Tahrirlash rejimida asl savdoning stockini qaytarish
         if is_edit_mode and original_sale_id:
-            print(
-                f"🔄 Asl tasdiqlanmagan savdoni o'chirish: ID={original_sale_id}")
+            print(f"🔄 Edit mode: Asl savdo ID={original_sale_id}")
             original_sale = Sale.query.get(original_sale_id)
-            if original_sale and original_sale.payment_status == 'pending':
-                # Asl tasdiqlanmagan savdoni o'chirish
-                db.session.delete(original_sale)
-                print(
-                    f"🗑️ Asl tasdiqlanmagan savdo o'chirildi: ID={original_sale_id}")
+            
+            if original_sale:
+                print(f"📝 Asl savdo holati: {original_sale.payment_status}")
+                
+                # Asl savdoning barcha itemlarini topish
+                original_items = SaleItem.query.filter_by(sale_id=original_sale_id).all()
+                print(f"📦 Asl savdoda {len(original_items)} ta item topildi")
+                
+                # Har bir item uchun stockni qaytarish
+                for orig_item in original_items:
+                    print(f"↩️ Stock qaytarish: Product {orig_item.product_id}, Quantity {orig_item.quantity}, Source: {orig_item.source_type} ID:{orig_item.source_id}")
+                    
+                    if orig_item.source_type == 'store':
+                        stock = StoreStock.query.filter_by(
+                            store_id=orig_item.source_id,
+                            product_id=orig_item.product_id
+                        ).first()
+                        
+                        if stock:
+                            stock.quantity += orig_item.quantity
+                            print(f"✅ Store stock qaytarildi: {stock.quantity}")
+                    
+                    elif orig_item.source_type == 'warehouse':
+                        stock = WarehouseStock.query.filter_by(
+                            warehouse_id=orig_item.source_id,
+                            product_id=orig_item.product_id
+                        ).first()
+                        
+                        if stock:
+                            stock.quantity += orig_item.quantity
+                            print(f"✅ Warehouse stock qaytarildi: {stock.quantity}")
+                
+                # Agar pending bo'lsa o'chirish, paid bo'lsa qoldiramiz
+                if original_sale.payment_status == 'pending':
+                    db.session.delete(original_sale)
+                    print(f"🗑️ Pending savdo o'chirildi: ID={original_sale_id}")
+                else:
+                    print(f"ℹ️ Paid savdo saqlanadi (tarix uchun): ID={original_sale_id}")
             else:
-                print(
-                    f"⚠️ Asl savdo topilmadi yoki pending emas: ID={original_sale_id}")
+                print(f"⚠️ Asl savdo topilmadi: ID={original_sale_id}")
 
         # Ma'lumotlar bazasiga saqlash
         db.session.commit()
