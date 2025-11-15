@@ -5490,11 +5490,13 @@ def create_pending_sale(data):
         original_sale_id = data.get('original_sale_id')
         pending_sale_id = data.get('pending_sale_id')
         skip_stock_return = data.get('skip_stock_return', False)
+        original_quantities = data.get('original_quantities', {})  # Asl miqdorlar
         
         logger.info("🔍 PENDING SALE PARAMS:")
         logger.info(f"   original_sale_id: {original_sale_id}")
         logger.info(f"   pending_sale_id: {pending_sale_id}")
         logger.info(f"   skip_stock_return: {skip_stock_return} (type: {type(skip_stock_return)})")
+        logger.info(f"   original_quantities: {original_quantities}")
 
         if not items:
             return jsonify({'success': False, 'error': 'Korzina bo\'sh'}), 400
@@ -5519,20 +5521,41 @@ def create_pending_sale(data):
                     logger.info(
                         f"📦 Stock qaytarilmoqda asl savdo uchun: {original_sale_id}")
                     for item in original_sale.items:
-                        if item.source_type == 'store':
-                            stock = StoreStock.query.filter_by(
-                                store_id=item.source_id,
-                                product_id=item.product_id
-                            ).first()
-                            if stock:
-                                stock.quantity += item.quantity
-                        elif item.source_type == 'warehouse':
-                            stock = WarehouseStock.query.filter_by(
-                                warehouse_id=item.source_id,
-                                product_id=item.product_id
-                            ).first()
-                            if stock:
-                                stock.quantity += item.quantity
+                        product_id = item.product_id
+                        original_qty = item.quantity
+                        
+                        # Yangi miqdorni topish
+                        new_qty = 0
+                        for new_item in items:
+                            if new_item.get('product_id') == product_id:
+                                new_qty = new_item.get('quantity', 0)
+                                break
+                        
+                        # Faqat farqni qaytarish (agar kamaygan bo'lsa)
+                        diff = original_qty - new_qty
+                        logger.info(f"   Mahsulot {product_id}: asl={original_qty}, yangi={new_qty}, farq={diff}")
+                        
+                        if diff > 0:  # Faqat kamaygan bo'lsa qaytarish
+                            if item.source_type == 'store':
+                                stock = StoreStock.query.filter_by(
+                                    store_id=item.source_id,
+                                    product_id=item.product_id
+                                ).first()
+                                if stock:
+                                    stock.quantity += diff
+                                    logger.info(f"   ✅ Store stockga qaytarildi: +{diff}")
+                            elif item.source_type == 'warehouse':
+                                stock = WarehouseStock.query.filter_by(
+                                    warehouse_id=item.source_id,
+                                    product_id=item.product_id
+                                ).first()
+                                if stock:
+                                    stock.quantity += diff
+                                    logger.info(f"   ✅ Warehouse stockga qaytarildi: +{diff}")
+                        elif diff < 0:  # Agar oshgan bo'lsa, frontend allaqachon reserve qilgan
+                            logger.info(f"   ⏭️ Miqdor oshgan, frontend allaqachon reserve qilgan: {diff}")
+                        else:
+                            logger.info("   ⏭️ Miqdor o'zgarmagan")
                 else:
                     logger.info(
                         "⏭️ Stock qaytarish o'tkazib yuborildi (skip_stock_return=True)")
