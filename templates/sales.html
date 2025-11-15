@@ -4274,7 +4274,13 @@
                 difference = quantity - originalQuantity; // DB bilan farq
                 
                 console.log(`📋 EDIT MODE: DB asl miqdor: ${originalQuantity}`);
+                console.log(`📋 Hozirgi korzina: ${oldQuantity}`);
                 console.log(`📊 DB bilan farq: ${difference} (${difference > 0 ? 'qo\'shimcha sotish' : difference < 0 ? 'kamroq sotish (qaytarish)' : 'o\'zgarish yo\'q'})`);
+                
+                // ✅ MUHIM: originalQuantities ni yangilash
+                // Keyingi o'zgarishda yangi miqdor "asl" miqdor bo'ladi
+                tabData.originalQuantities[productId] = quantity;
+                console.log(`✅ originalQuantities yangilandi: ${originalQuantity} → ${quantity}`);
             } else {
                 // Oddiy rejim: hozirgi korzina miqdori bilan farq
                 difference = quantity - oldQuantity;
