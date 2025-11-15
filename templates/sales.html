@@ -1,4 +1,4 @@
-{% extends "base_with_sidebar.html" %}
+﻿{% extends "base_with_sidebar.html" %}
 
 {% block title %}Savdo - Omborxona Boshqaruv Tizimi{% endblock %}
 
@@ -4256,6 +4256,14 @@
             console.log(`   Asl miqdor: ${originalQuantity}, Eski: ${oldQuantity}, Yangi: ${quantity}`);
             console.log(`   Stock o'zgarishi: ${stockChange} (${stockChange > 0 ? 'qo\'shimcha kerak' : stockChange < 0 ? 'qaytarish kerak' : 'o\'zgarish yo\'q'})`);
             
+            // Tahrirlash yuklanayotganda stock operatsiyalarini skip qilish
+            if (tabData.isLoadingEditData) {
+                console.log(`⏸️ Tahrirlash yuklanmoqda - stock operatsiyalari skip qilindi`);
+                item.quantity = quantity; // Faqat miqdorni yangilash
+                updateCart(currentTabId);
+                return;
+            }
+            
             if (stockChange > 0) {
                 // Qo'shimcha stock kerak
                 const success = await reserveStock(item.id, stockChange, item.location_id, item.location_type);
@@ -4529,30 +4537,36 @@
             console.log(`   originalQuantities:`, tabData.originalQuantities);
             console.log(`   Asl miqdor: ${originalQuantity}, Joriy: ${currentQuantity}`);
             
-            // ✅ ODDIY MANTIQ: Har doim stock qaytarish
-            // Korzinadan olib tashlanganda har doim stock qaytariladi
-            console.log(`� Mahsulot korzinadan olib tashlanmoqda - stock qaytarish: ${currentQuantity} ta`);
             
-            try {
-                stockReturnSuccess = await addStock(
-                    itemToRemove.id,
-                    currentQuantity,
-                    itemToRemove.location_id,
-                    itemToRemove.location_type
-                );
+            // Tahrirlash yuklanayotganda stock operatsiyalarini skip qilish
+            if (tabData.isLoadingEditData) {
+                console.log('Tahrirlash yuklanmoqda - stock qaytarish skip qilindi');
+                stockReturnSuccess = true; // Skip qilindi deb belgilash
+            } else {
+                // ODDIY MANTIQ: Har doim stock qaytarish
+                // Korzinadan olib tashlanganda har doim stock qaytariladi
+                console.log('Mahsulot korzinadan olib tashlanmoqda - stock qaytarish:', currentQuantity, 'ta');
                 
-                if (stockReturnSuccess) {
-                    console.log(`✅ ${currentQuantity} ta stock muvaffaqiyatli qaytarildi`);
-                    showAlert(`↩️ ${itemToRemove.name} uchun ${currentQuantity} ta stock qaytarildi!`, 'success');
-                } else {
-                    console.log(`❌ Stock qaytarishda muammo`);
+                try {
+                    stockReturnSuccess = await addStock(
+                        itemToRemove.id,
+                        currentQuantity,
+                        itemToRemove.location_id,
+                        itemToRemove.location_type
+                    );
+                    
+                    if (stockReturnSuccess) {
+                        console.log('Stock muvaffaqiyatli qaytarildi:', currentQuantity, 'ta');
+                        showAlert('Mahsulot uchun ' + currentQuantity + ' ta stock qaytarildi!', 'success');
+                    } else {
+                        console.log('Stock qaytarishda muammo');
+                    }
+                } catch (error) {
+                    console.error('Stock qaytarishda xatolik:', error);
+                    stockReturnSuccess = false;
                 }
-            } catch (error) {
-                console.error('❌ Stock qaytarishda xatolik:', error);
-                stockReturnSuccess = false;
             }
-            
-            // Original quantities dan ham o'chirish
+
             delete tabData.originalQuantities[productId];
         }
         
