@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 
+{% block head %}
+{{ super() }}
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+{% endblock %}
+
 {% block extra_css %}
 <style>
 .store-grid {
@@ -133,6 +140,156 @@
         transform: translateY(-1px);
     }
 
+    /* Modal Styles */
+    .delete-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .delete-modal.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        color: #e74c3c;
+    }
+
+    .modal-header i {
+        font-size: 2rem;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    .modal-body {
+        margin-bottom: 20px;
+    }
+
+    .modal-body p {
+        margin: 10px 0;
+        color: #555;
+        line-height: 1.6;
+    }
+
+    .modal-body .store-name-highlight {
+        font-weight: bold;
+        color: #e74c3c;
+        font-size: 1.1rem;
+        padding: 5px 10px;
+        background: #fee;
+        border-radius: 4px;
+        display: inline-block;
+        margin: 10px 0;
+    }
+
+    .modal-input-group {
+        margin: 20px 0;
+    }
+
+    .modal-input-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .modal-input-group input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.3s;
+    }
+
+    .modal-input-group input:focus {
+        outline: none;
+        border-color: #3498db;
+    }
+
+    .modal-input-group input.error {
+        border-color: #e74c3c;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .modal-btn {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .modal-btn-cancel {
+        background: #95a5a6;
+        color: white;
+    }
+
+    .modal-btn-cancel:hover {
+        background: #7f8c8d;
+    }
+
+    .modal-btn-delete {
+        background: #e74c3c;
+        color: white;
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .modal-btn-delete.enabled {
+        opacity: 1;
+        cursor: pointer;
+    }
+
+    .modal-btn-delete.enabled:hover {
+        background: #c0392b;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+    }
+
     /* RESPONSIVE DESIGN - BIR QATORDA 3 TA */
     @media (max-width: 1200px) {
         .store-grid {
@@ -154,6 +311,40 @@
 {% endblock %}
 
 {% block content %}
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="delete-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>DIQQAT! Do'konni o'chirish</h3>
+        </div>
+        <div class="modal-body">
+            <p><strong>Siz quyidagi do'konni o'chirmoqchisiz:</strong></p>
+            <div class="store-name-highlight" id="modalStoreName"></div>
+            <p style="color: #e74c3c; font-weight: bold;">⚠️ Bu amal qaytarib bo'lmaydi!</p>
+            <p>Davom etish uchun do'kon nomini quyidagi maydonga kiriting:</p>
+            
+            <div class="modal-input-group">
+                <label for="confirmInput">Do'kon nomi:</label>
+                <input 
+                    type="text" 
+                    id="confirmInput" 
+                    placeholder="Do'kon nomini kiriting..."
+                    autocomplete="off"
+                >
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeDeleteModal()">
+                ❌ Bekor qilish
+            </button>
+            <button class="modal-btn modal-btn-delete" id="confirmDeleteBtn" disabled>
+                🗑️ O'chirish
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Content Header -->
 <div class="content-header" style="display: flex; justify-content: space-between; align-items: center;">
     <div>
@@ -226,49 +417,131 @@
         console.log('Do\'konlar sahifasi yuklandi');
     });
 
-    // Do'kon o'chirish funksiyasi
+    // Modal variables
+    let currentStoreId = null;
+    let currentStoreName = null;
+
+    // Open delete modal
     function deleteStore(storeId, storeName) {
-        console.log('🗑️ O\'chirish funksiyasi chaqirildi!');
-        console.log('   Store ID:', storeId, typeof storeId);
-        console.log('   Store Name:', storeName, typeof storeName);
+        console.log('🎯 YANGI deleteStore FUNKSIYASI CHAQIRILDI!');
+        console.log('O\'chirish funksiyasi chaqirildi:', storeId, storeName);
         
-        // Validatsiya
-        if (!storeId || storeId === 'undefined' || storeId === '') {
-            console.error('❌ Store ID noto\'g\'ri:', storeId);
-            alert('Xatolik: Dokon ID topilmadi!');
+        currentStoreId = storeId;
+        currentStoreName = storeName;
+        
+        // Modal ochish
+        const modal = document.getElementById('deleteModal');
+        const modalStoreName = document.getElementById('modalStoreName');
+        const confirmInput = document.getElementById('confirmInput');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        
+        if (!modal) {
+            console.error('❌ Modal topilmadi!');
+            alert('Xatolik: Modal oyna topilmadi!');
             return;
         }
         
-        if (confirm(`Haqiqatan ham "${storeName}" do'konini o'chirmoqchimisiz?\n\nDiqqat: Bu amal qaytarib bo'lmaydi!`)) {
-            console.log('✅ Foydalanuvchi tasdiqladi, API ga so\'rov yuborilmoqda...');
+        modalStoreName.textContent = storeName;
+        confirmInput.value = '';
+        confirmBtn.disabled = true;
+        confirmBtn.classList.remove('enabled');
+        
+        modal.classList.add('active');
+        console.log('✅ Modal ochildi, active class qo\'shildi');
+        
+        // Input'ga fokus
+        setTimeout(() => confirmInput.focus(), 300);
+    }
+
+    // Close delete modal
+    function closeDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        modal.classList.remove('active');
+        currentStoreId = null;
+        currentStoreName = null;
+    }
+
+    // Input validation - real-time
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmInput = document.getElementById('confirmInput');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        
+        if (!confirmInput || !confirmBtn) return;
+        
+        confirmInput.addEventListener('input', function() {
+            const inputValue = this.value.trim();
             
-            fetch(`/api/store/${storeId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
+            if (inputValue === currentStoreName) {
+                confirmBtn.disabled = false;
+                confirmBtn.classList.add('enabled');
+                this.classList.remove('error');
+            } else {
+                confirmBtn.disabled = true;
+                confirmBtn.classList.remove('enabled');
+                if (inputValue.length > 0) {
+                    this.classList.add('error');
+                } else {
+                    this.classList.remove('error');
                 }
-            })
-            .then(response => {
-                console.log('API javob olindi:', response.status, response.statusText);
-                return response.json().then(data => {
-                    console.log('📋 Server javob ma\'lumotlari:', data);
-                    if (response.ok) {
-                        console.log('✅ Muvaffaqiyat! Sahifa qayta yuklanmoqda...');
-                        alert(data.message || 'Do\'kon muvaffaqiyatli o\'chirildi!');
-                        window.location.reload();
-                    } else {
-                        console.error('❌ API xatosi:', response.status, data);
-                        alert('Xatolik: ' + (data.error || data.message || 'Do\'konni o\'chirib bo\'lmadi'));
-                    }
-                });
-            })
-            .catch(error => {
-                console.error('Fetch xatosi:', error);
-                alert('Aloqa xatosi! Qaytadan urinib ko\'ring.');
+            }
+        });
+        
+        // Enter tugmasini bosish
+        confirmInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !confirmBtn.disabled) {
+                confirmDeleteStore();
+            }
+        });
+        
+        // Modal tashqarisiga bosish
+        document.getElementById('deleteModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDeleteModal();
+            }
+        });
+        
+        // Confirm delete button click
+        confirmBtn.addEventListener('click', confirmDeleteStore);
+    });
+
+    // Confirm delete store
+    function confirmDeleteStore() {
+        if (!currentStoreId) return;
+        
+        console.log('Tasdiqlandi! O\'chirish boshlandi:', currentStoreId);
+        
+        // Tugmani o'chirish
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '⏳ O\'chirilmoqda...';
+        
+        fetch(`/api/store/${currentStoreId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            console.log('API javob olindi:', response.status, response.statusText);
+            return response.json().then(data => {
+                if (response.ok) {
+                    console.log('Muvaffaqiyat! Sahifa qayta yuklanmoqda...');
+                    closeDeleteModal();
+                    window.location.reload();
+                } else {
+                    console.error('API xatosi:', response.status, data);
+                    alert('Xatolik: ' + (data.error || data.message || 'Do\'konni o\'chirib bo\'lmadi'));
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = '🗑️ O\'chirish';
+                }
             });
-        } else {
-            console.log('Foydalanuvchi bekor qildi');
-        }
+        })
+        .catch(error => {
+            console.error('Fetch xatosi:', error);
+            alert('Aloqa xatosi! Qaytadan urinib ko\'ring.');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '🗑️ O\'chirish';
+        });
     }
 
     function toggleStore(storeId, isActive) {
