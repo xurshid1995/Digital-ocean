@@ -1,5 +1,12 @@
 {% extends "base_with_sidebar.html" %}
 
+{% block head %}
+{{ super() }}
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+{% endblock %}
+
 {% block title %}Mijozlar - Sayt 2025{% endblock %}
 
 {% block extra_css %}
@@ -405,7 +412,192 @@
         }
     }
 </style>
+    /* Modal Styles */
+    .delete-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .delete-modal.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        color: #e74c3c;
+    }
+
+    .modal-header i {
+        font-size: 2rem;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    .modal-body {
+        margin-bottom: 20px;
+    }
+
+    .modal-body p {
+        margin: 10px 0;
+        color: #555;
+        line-height: 1.6;
+    }
+
+    .modal-body .customer-name-highlight {
+        font-weight: bold;
+        color: #e74c3c;
+        font-size: 1.1rem;
+        padding: 5px 10px;
+        background: #fee;
+        border-radius: 4px;
+        display: inline-block;
+        margin: 10px 0;
+    }
+
+    .modal-input-group {
+        margin: 20px 0;
+    }
+
+    .modal-input-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .modal-input-group input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.3s;
+    }
+
+    .modal-input-group input:focus {
+        outline: none;
+        border-color: #3498db;
+    }
+
+    .modal-input-group input.error {
+        border-color: #e74c3c;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .modal-btn {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .modal-btn-cancel {
+        background: #95a5a6;
+        color: white;
+    }
+
+    .modal-btn-cancel:hover {
+        background: #7f8c8d;
+    }
+
+    .modal-btn-delete {
+        background: #e74c3c;
+        color: white;
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .modal-btn-delete.enabled {
+        opacity: 1;
+        cursor: pointer;
+    }
+
+    .modal-btn-delete.enabled:hover {
+        background: #c0392b;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+    }
+</style>
 {% endblock %}
+
+{% block content %}
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="delete-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>DIQQAT! Mijozni o'chirish</h3>
+        </div>
+        <div class="modal-body">
+            <p><strong>Siz quyidagi mijozni o'chirmoqchisiz:</strong></p>
+            <div class="customer-name-highlight" id="modalCustomerName"></div>
+            <p style="color: #e74c3c; font-weight: bold;">⚠️ Bu amal qaytarib bo'lmaydi!</p>
+            <p>Davom etish uchun mijoz nomini quyidagi maydonga kiriting:</p>
+            
+            <div class="modal-input-group">
+                <label for="confirmInput">Mijoz nomi:</label>
+                <input 
+                    type="text" 
+                    id="confirmInput" 
+                    placeholder="Mijoz nomini kiriting..."
+                    autocomplete="off"
+                >
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeDeleteModal()">
+                ❌ Bekor qilish
+            </button>
+            <button class="modal-btn modal-btn-delete" id="confirmDeleteBtn" disabled>
+                🗑️ O'chirish
+            </button>
+        </div>
+    </div>
+</div>
 
 {% block content %}
 <div class="customers-container">
@@ -665,7 +857,11 @@
         window.location.href = `/edit-customer?id=${customerId}`;
     }
 
-    // Mijozni o'chirish
+    // Modal variables
+    let currentCustomerId = null;
+    let currentCustomerName = null;
+
+    // Mijozni o'chirish - modal ochish
     function deleteCustomer(customerId, customerName) {
         // Faqat admin o'chira oladi
         if (userRole !== 'admin') {
@@ -673,28 +869,128 @@
             return;
         }
         
-        if (confirm(`Haqiqatan ham "${customerName}" mijozini o'chirmoqchimisiz?\n\nDiqqat: Bu amal qaytarib bo'lmaydi!`)) {
-            fetch(`/api/customers/${customerId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json().then(data => {
-                        alert(data.message || 'Mijoz muvaffaqiyatli o\'chirildi!');
-                        loadCustomers(); // Ro'yxatni yangilash
-                    });
+        console.log('🎯 YANGI deleteCustomer FUNKSIYASI CHAQIRILDI!');
+        console.log('O\'chirish funksiyasi chaqirildi:', customerId, customerName);
+        
+        currentCustomerId = customerId;
+        currentCustomerName = customerName;
+        
+        // Modal ochish
+        const modal = document.getElementById('deleteModal');
+        const modalCustomerName = document.getElementById('modalCustomerName');
+        const confirmInput = document.getElementById('confirmInput');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        
+        if (!modal) {
+            console.error('❌ Modal topilmadi!');
+            alert('Xatolik: Modal oyna topilmadi!');
+            return;
+        }
+        
+        modalCustomerName.textContent = customerName;
+        confirmInput.value = '';
+        confirmBtn.disabled = true;
+        confirmBtn.classList.remove('enabled');
+        
+        modal.classList.add('active');
+        console.log('✅ Modal ochildi, active class qo\'shildi');
+        
+        // Input'ga fokus
+        setTimeout(() => confirmInput.focus(), 300);
+    }
+
+    // Close delete modal
+    function closeDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        modal.classList.remove('active');
+        currentCustomerId = null;
+        currentCustomerName = null;
+    }
+
+    // Input validation - real-time
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmInput = document.getElementById('confirmInput');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        
+        if (!confirmInput || !confirmBtn) return;
+        
+        confirmInput.addEventListener('input', function() {
+            const inputValue = this.value.trim();
+            
+            if (inputValue === currentCustomerName) {
+                confirmBtn.disabled = false;
+                confirmBtn.classList.add('enabled');
+                this.classList.remove('error');
+            } else {
+                confirmBtn.disabled = true;
+                confirmBtn.classList.remove('enabled');
+                if (inputValue.length > 0) {
+                    this.classList.add('error');
                 } else {
-                    alert('Xatolik yuz berdi! Mijozni o\'chirib bo\'lmadi.');
+                    this.classList.remove('error');
                 }
-            })
-            .catch(error => {
-                console.error('Xatolik:', error);
-                alert('Aloqa xatosi! Qaytadan urinib ko\'ring.');
+            }
+        });
+        
+        // Enter tugmasini bosish
+        confirmInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !confirmBtn.disabled) {
+                confirmDeleteCustomer();
+            }
+        });
+        
+        // Modal tashqarisiga bosish
+        const modal = document.getElementById('deleteModal');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeDeleteModal();
+                }
             });
         }
+        
+        // Confirm delete button click
+        confirmBtn.addEventListener('click', confirmDeleteCustomer);
+    });
+
+    // Confirm delete customer
+    function confirmDeleteCustomer() {
+        if (!currentCustomerId) return;
+        
+        console.log('Tasdiqlandi! O\'chirish boshlandi:', currentCustomerId);
+        
+        // Tugmani o'chirish
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '⏳ O\'chirilmoqda...';
+        
+        fetch(`/api/customers/${currentCustomerId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            console.log('API javob olindi:', response.status, response.statusText);
+            if (response.ok) {
+                return response.json().then(data => {
+                    console.log('Muvaffaqiyat! Ro\'yxat yangilanmoqda...');
+                    closeDeleteModal();
+                    alert(data.message || 'Mijoz muvaffaqiyatli o\'chirildi!');
+                    loadCustomers(); // Ro'yxatni yangilash
+                });
+            } else {
+                alert('Xatolik yuz berdi! Mijozni o\'chirib bo\'lmadi.');
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '🗑️ O\'chirish';
+            }
+        })
+        .catch(error => {
+            console.error('Fetch xatosi:', error);
+            alert('Aloqa xatosi! Qaytadan urinib ko\'ring.');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '🗑️ O\'chirish';
+        });
     }
 
     // Xatolikni ko'rsatish
