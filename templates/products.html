@@ -565,6 +565,23 @@
     
     console.log('👤 Foydalanuvchi dokan ID:', userStoreId, 'Rol:', userRole);
 
+    // Valyuta kursi
+    let currencyRate = 12500;
+
+    // Valyuta kursini yuklash
+    async function loadCurrencyRate() {
+        try {
+            const response = await fetch('/api/get-currency-rate');
+            const data = await response.json();
+            if (data.success && data.rate) {
+                currencyRate = parseFloat(data.rate.rate);
+                console.log('💱 Valyuta kursi yuklandi:', currencyRate);
+            }
+        } catch (error) {
+            console.error('Valyuta kursini yuklashda xatolik:', error);
+        }
+    }
+
     // Qidiruv matnini ajratib ko'rsatish funksiyasi
     function highlightSearchText(text, searchTerm) {
         if (!searchTerm || searchTerm.trim() === '') {
@@ -577,6 +594,7 @@
 
     // Sahifa yuklanganda
     document.addEventListener('DOMContentLoaded', function() {
+        loadCurrencyRate();
         loadProducts();
         
         // Qidiruv maydoniga fokus berish
@@ -856,7 +874,12 @@
                 tableHtml += `
                     <tr>
                         <td class="product-name">${highlightedName}</td>
-                        <td class="price-cell">$${formatPrice(product.sell_price)}</td>
+                        <td class="price-cell">
+                            <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                <span style="color: #28a745; font-weight: 600;">$${formatPrice(product.sell_price)}</span>
+                                <span style="color: #6c757d; font-size: 0.85rem;">${formatPrice(product.sell_price * currencyRate)} so'm</span>
+                            </div>
+                        </td>
                         <td class="location-cell">${locations}</td>
                         <td><span class="quantity-cell">${totalStock}</span></td>
                         <td><span class="stock-badge ${stockClass}">${stockText}</span></td>
