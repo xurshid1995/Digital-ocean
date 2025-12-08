@@ -1832,8 +1832,8 @@ function displaySalesData(data) {
     console.log('📈 Statistikalar:', stats);
     console.log('📋 Savdolar:', salesData);
     
-    // Statistikalarni yangilash
-    document.getElementById('totalSales').textContent = stats.total_sales || salesData.length;
+    // Statistikalarni yangilash (0 ham to'g'ri qiymat, shuning uchun ?? ishlatamiz)
+    document.getElementById('totalSales').textContent = stats.total_sales ?? salesData.length;
     
     // Yig'indi va foyda statistikalarini faqat USD da ko'rsatish
     const totalRevenue = stats.total_revenue || 0;
