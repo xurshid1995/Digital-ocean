@@ -1723,7 +1723,21 @@ async function loadSalesHistory(page = 1) {
         }
         
         console.log('🔄 Real API ma\'lumotlari yuklanmoqda...');
-        const response = await fetch(`/api/sales-history?page=${page}&per_page=${itemsPerPage}&nocache=` + new Date().getTime(), {
+        
+        // Sana filtrlarini olish
+        const dateFrom = document.getElementById('dateFromFilter')?.value || '';
+        const dateTo = document.getElementById('dateToFilter')?.value || '';
+        
+        // URL parametrlarini yaratish
+        let apiUrl = `/api/sales-history?page=${page}&per_page=${itemsPerPage}`;
+        if (dateFrom) apiUrl += `&start_date=${dateFrom}`;
+        if (dateTo) apiUrl += `&end_date=${dateTo}`;
+        apiUrl += `&nocache=` + new Date().getTime();
+        
+        console.log('📅 API URL:', apiUrl);
+        console.log('📅 Sana filtrlari:', { dateFrom, dateTo });
+        
+        const response = await fetch(apiUrl, {
             method: 'GET',
             cache: 'no-cache',
             headers: {

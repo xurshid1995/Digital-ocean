@@ -4587,72 +4587,64 @@ def api_sales_history():
                 'amount': float(total or 0)
             }
 
-        # Top selling products - SQL aggregate bilan optimal
+        # Top selling products - base_stats_query dan foydalanib subquery orqali
         from sqlalchemy.orm import aliased
-        Product_alias = aliased(Product)
         
-        top_products_query = db.session.query(
-            Product_alias.name,
-            func.sum(SaleItem.quantity).label('quantity'),
-            func.sum(SaleItem.total_price).label('revenue')
-        ).join(
-            SaleItem, SaleItem.product_id == Product_alias.id
-        ).join(
-            Sale, Sale.id == SaleItem.sale_id
-        )
-        
-        # Apply same filters as main query to subquery
-        if start_date:
-            top_products_query = top_products_query.filter(Sale.sale_date >= start_date_obj)
-        if end_date:
-            top_products_query = top_products_query.filter(Sale.sale_date <= end_date_obj)
-        if store_id:
-            top_products_query = top_products_query.filter(Sale.store_id == store_id)
-        if payment_status:
-            top_products_query = top_products_query.filter(Sale.payment_status == payment_status)
-        if current_user.role == 'sotuvchi':
-            top_products_query = top_products_query.filter(Sale.user_id == current_user.id)
+        # Base query'dan sale ID'larini olish (barcha filtrlar qo'llanilgan)
+        filtered_sale_ids = [sale_id for (sale_id,) in base_stats_query.with_entities(Sale.id).all()]
         
         top_products = []
-        for name, quantity, revenue in top_products_query.group_by(Product_alias.name).order_by(func.sum(SaleItem.quantity).desc()).limit(5).all():
-            top_products.append({
-                'name': name or 'Noma\'lum',
-                'quantity': float(quantity or 0),
-                'revenue': float(revenue or 0)
-            })
+        if filtered_sale_ids:
+            Product_alias = aliased(Product)
+            
+            top_products_query = db.session.query(
+                Product_alias.name,
+                func.sum(SaleItem.quantity).label('quantity'),
+                func.sum(SaleItem.total_price).label('revenue')
+            ).join(
+                SaleItem, SaleItem.product_id == Product_alias.id
+            ).filter(
+                SaleItem.sale_id.in_(filtered_sale_ids)
+            ).group_by(
+                Product_alias.name
+            ).order_by(
+                func.sum(SaleItem.quantity).desc()
+            ).limit(5)
+            
+            for name, quantity, revenue in top_products_query.all():
+                top_products.append({
+                    'name': name or 'Noma\'lum',
+                    'quantity': float(quantity or 0),
+                    'revenue': float(revenue or 0)
+                })
 
-        # Store performance - SQL aggregate bilan optimal
-        Store_alias = aliased(Store)
-        
-        store_perf_query = db.session.query(
-            Store_alias.name,
-            func.count(Sale.id).label('sales'),
-            func.sum(Sale.total_amount).label('revenue'),
-            func.sum(Sale.total_profit).label('profit')
-        ).join(
-            Sale, Sale.store_id == Store_alias.id
-        )
-        
-        # Apply same filters
-        if start_date:
-            store_perf_query = store_perf_query.filter(Sale.sale_date >= start_date_obj)
-        if end_date:
-            store_perf_query = store_perf_query.filter(Sale.sale_date <= end_date_obj)
-        if store_id:
-            store_perf_query = store_perf_query.filter(Sale.store_id == store_id)
-        if payment_status:
-            store_perf_query = store_perf_query.filter(Sale.payment_status == payment_status)
-        if current_user.role == 'sotuvchi':
-            store_perf_query = store_perf_query.filter(Sale.user_id == current_user.id)
-        
+        # Store performance - base_stats_query dan foydalanib
         store_performance = []
-        for name, sales_count, revenue, profit in store_perf_query.group_by(Store_alias.name).order_by(func.sum(Sale.total_amount).desc()).all():
-            store_performance.append({
-                'name': name or 'Noma\'lum',
-                'sales': sales_count,
-                'revenue': float(revenue or 0),
-                'profit': float(profit or 0)
-            })
+        if filtered_sale_ids:
+            Store_alias = aliased(Store)
+            
+            store_perf_query = db.session.query(
+                Store_alias.name,
+                func.count(Sale.id).label('sales'),
+                func.sum(Sale.total_amount).label('revenue'),
+                func.sum(Sale.total_profit).label('profit')
+            ).join(
+                Sale, Sale.store_id == Store_alias.id
+            ).filter(
+                Sale.id.in_(filtered_sale_ids)
+            ).group_by(
+                Store_alias.name
+            ).order_by(
+                func.sum(Sale.total_amount).desc()
+            )
+            
+            for name, sales_count, revenue, profit in store_perf_query.all():
+                store_performance.append({
+                    'name': name or 'Noma\'lum',
+                    'sales': sales_count,
+                    'revenue': float(revenue or 0),
+                    'profit': float(profit or 0)
+                })
 
         sales_list = [sale.to_dict() for sale in sales]
         logger.debug(f" API javobida yuborilayotgan sales: {len(sales_list)} ta")
