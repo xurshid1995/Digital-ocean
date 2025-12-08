@@ -4412,6 +4412,13 @@ def api_sales_history():
         payment_method = request.args.get('payment_method')
         location_filter = request.args.get('location_filter')  # store_1, warehouse_2 formatida
         search_term = request.args.get('search_term')  # Mahsulot nomi bo'yicha qidiruv
+        
+        # DEFAULT: Agar sana ko'rsatilmagan bo'lsa, bugungi kunni ko'rsatish
+        if not start_date and not end_date:
+            today = datetime.now().date()
+            start_date = today.strftime('%Y-%m-%d')
+            end_date = today.strftime('%Y-%m-%d')
+            logger.info(f"📅 Default: Bugungi kun savdolari ko'rsatiladi ({start_date})")
 
         print(
             f"📋 Query parameters: start_date={start_date}, end_date={end_date}, customer_id={customer_id}, payment_status={payment_status}, location_filter={location_filter}, search_term={search_term}")
@@ -4500,6 +4507,16 @@ def api_sales_history():
         # Order by date descending (yangi savdolardan eski savdolarga)
         query = query.order_by(Sale.sale_date.desc())
 
+        # STATISTIKA: Pagination qo'llanishdan OLDIN barcha filtr qo'llanilgan savdolardan hisoblash
+        all_filtered_sales = query.all()
+        total_sales_count = len(all_filtered_sales)
+        total_revenue = sum(float(sale.total_amount) for sale in all_filtered_sales)
+        total_profit = sum(float(sale.total_profit) for sale in all_filtered_sales)
+        
+        logger.info(f" Filtr qo'llanilgan jami savdolar: {total_sales_count}")
+        logger.info(f" Jami daromad: ${total_revenue:.2f}")
+        logger.info(f" Jami foyda: ${total_profit:.2f}")
+
         # Pagination parametrlarini olish
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 50, type=int)
@@ -4524,16 +4541,12 @@ def api_sales_history():
             sale_ids = [sale.id for sale in sales[:3]]
             print(f"   - Birinchi 3 ta savdo ID: {sale_ids}")
 
-        # Calculate statistics - yangi tuzilma bilan
-        total_sales = len(sales)
-        total_revenue = sum(float(sale.total_amount) for sale in sales)
-        total_profit = sum(float(sale.total_profit) for sale in sales)
-
+        # STATISTIKA: Barcha filtr qo'llanilgan savdolardan hisoblash
         # Jami mahsulotlar soni
-        total_items = sum(len(sale.items) for sale in sales)
+        total_items = sum(len(sale.items) for sale in all_filtered_sales)
 
         # Average order value
-        avg_order_value = total_revenue / total_sales if total_sales > 0 else 0
+        avg_order_value = total_revenue / total_sales_count if total_sales_count > 0 else 0
 
         # Profit margin
         profit_margin = (
@@ -4542,16 +4555,16 @@ def api_sales_history():
 
         # Payment method breakdown
         payment_methods = {}
-        for sale in sales:
+        for sale in all_filtered_sales:
             method = sale.payment_method
             if method not in payment_methods:
                 payment_methods[method] = {'count': 0, 'amount': 0}
             payment_methods[method]['count'] += 1
             payment_methods[method]['amount'] += float(sale.total_amount)
 
-        # Top selling products - yangi tuzilma bilan
+        # Top selling products - barcha filtr qo'llanilgan savdolardan
         product_stats = {}
-        for sale in sales:
+        for sale in all_filtered_sales:
             for item in sale.items:
                 product_name = item.product.name if item.product else 'Noma\'lum'
                 if product_name not in product_stats:
@@ -4567,9 +4580,9 @@ def api_sales_history():
             key=lambda x: x['quantity'], reverse=True
         )[:5]  # Top 5 products
 
-        # Store performance
+        # Store performance - barcha filtr qo'llanilgan savdolardan
         store_stats = {}
-        for sale in sales:
+        for sale in all_filtered_sales:
             store_name = sale.store.name if sale.store else 'Noma\'lum'
             if store_name not in store_stats:
                 store_stats[store_name] = {
@@ -4614,7 +4627,7 @@ def api_sales_history():
                     'next_num': pagination.next_num
                 },
                 'statistics': {
-                    'total_sales': pagination.total,  # Jami savdolar soni (paginated)
+                    'total_sales': total_sales_count,  # Filtr qo'llanilgan barcha savdolar soni
                     'total_revenue': round(total_revenue, 2),
                     'total_profit': round(total_profit, 2),
                     'total_items': total_items,
