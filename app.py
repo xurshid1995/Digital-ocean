@@ -4507,15 +4507,22 @@ def api_sales_history():
         # Order by date descending (yangi savdolardan eski savdolarga)
         query = query.order_by(Sale.sale_date.desc())
 
-        # STATISTIKA: Pagination qo'llanishdan OLDIN barcha filtr qo'llanilgan savdolardan hisoblash
-        all_filtered_sales = query.all()
-        total_sales_count = len(all_filtered_sales)
-        total_revenue = sum(float(sale.total_amount) for sale in all_filtered_sales)
-        total_profit = sum(float(sale.total_profit) for sale in all_filtered_sales)
+        # STATISTIKA: SQL aggregate funksiyalari bilan optimal hisoblash
+        from sqlalchemy import func
+        stats_query = query.with_entities(
+            func.count(Sale.id).label('total_count'),
+            func.sum(Sale.total_amount).label('total_revenue'),
+            func.sum(Sale.total_profit).label('total_profit')
+        )
+        stats_result = stats_query.first()
         
-        logger.info(f" Filtr qo'llanilgan jami savdolar: {total_sales_count}")
-        logger.info(f" Jami daromad: ${total_revenue:.2f}")
-        logger.info(f" Jami foyda: ${total_profit:.2f}")
+        total_sales_count = stats_result.total_count or 0
+        total_revenue = float(stats_result.total_revenue or 0)
+        total_profit = float(stats_result.total_profit or 0)
+        
+        logger.info(f"📊 Filtr qo'llanilgan jami savdolar: {total_sales_count}")
+        logger.info(f"💰 Jami daromad: ${total_revenue:.2f}")
+        logger.info(f"💵 Jami foyda: ${total_profit:.2f}")
 
         # Pagination parametrlarini olish
         page = request.args.get('page', 1, type=int)
@@ -4541,9 +4548,9 @@ def api_sales_history():
             sale_ids = [sale.id for sale in sales[:3]]
             print(f"   - Birinchi 3 ta savdo ID: {sale_ids}")
 
-        # STATISTIKA: Barcha filtr qo'llanilgan savdolardan hisoblash
-        # Jami mahsulotlar soni
-        total_items = sum(len(sale.items) for sale in all_filtered_sales)
+        # STATISTIKA: To'liq hisoblashlar uchun alohida querylar
+        # Jami mahsulotlar soni (hozircha joriy sahifadan)
+        total_items = sum(len(sale.items) for sale in sales) if sales else 0
 
         # Average order value
         avg_order_value = total_revenue / total_sales_count if total_sales_count > 0 else 0
@@ -4553,55 +4560,87 @@ def api_sales_history():
             (total_profit / total_revenue * 100) if total_revenue > 0 else 0
         )
 
-        # Payment method breakdown
+        # Payment method breakdown - SQL GROUP BY bilan optimal
+        payment_stats_query = query.with_entities(
+            Sale.payment_method,
+            func.count(Sale.id).label('count'),
+            func.sum(Sale.total_amount).label('total')
+        ).group_by(Sale.payment_method)
+        
         payment_methods = {}
-        for sale in all_filtered_sales:
-            method = sale.payment_method
-            if method not in payment_methods:
-                payment_methods[method] = {'count': 0, 'amount': 0}
-            payment_methods[method]['count'] += 1
-            payment_methods[method]['amount'] += float(sale.total_amount)
-
-        # Top selling products - barcha filtr qo'llanilgan savdolardan
-        product_stats = {}
-        for sale in all_filtered_sales:
-            for item in sale.items:
-                product_name = item.product.name if item.product else 'Noma\'lum'
-                if product_name not in product_stats:
-                    product_stats[product_name] = {'quantity': 0, 'revenue': 0}
-                product_stats[product_name]['quantity'] += float(item.quantity)
-                product_stats[product_name]['revenue'] += float(
-                    item.total_price)
-
-        # Sort by quantity sold
-        top_products = sorted(
-            [{'name': k, 'quantity': v['quantity'], 'revenue': v['revenue']}
-             for k, v in product_stats.items()],
-            key=lambda x: x['quantity'], reverse=True
-        )[:5]  # Top 5 products
-
-        # Store performance - barcha filtr qo'llanilgan savdolardan
-        store_stats = {}
-        for sale in all_filtered_sales:
-            store_name = sale.store.name if sale.store else 'Noma\'lum'
-            if store_name not in store_stats:
-                store_stats[store_name] = {
-                    'sales': 0, 'revenue': 0, 'profit': 0
-                }
-            store_stats[store_name]['sales'] += 1
-            store_stats[store_name]['revenue'] += float(sale.total_amount)
-            store_stats[store_name]['profit'] += float(sale.total_profit)
-
-        store_performance = [
-            {
-                'name': k,
-                'sales': v['sales'],
-                'revenue': v['revenue'],
-                'profit': v['profit']
+        for method, count, total in payment_stats_query.all():
+            method_name = method or 'Unknown'
+            payment_methods[method_name] = {
+                'count': count,
+                'amount': float(total or 0)
             }
-            for k, v in store_stats.items()
-        ]
-        store_performance.sort(key=lambda x: x['revenue'], reverse=True)
+
+        # Top selling products - SQL aggregate bilan optimal
+        from sqlalchemy.orm import aliased
+        Product_alias = aliased(Product)
+        
+        top_products_query = db.session.query(
+            Product_alias.name,
+            func.sum(SaleItem.quantity).label('quantity'),
+            func.sum(SaleItem.total_price).label('revenue')
+        ).join(
+            SaleItem, SaleItem.product_id == Product_alias.id
+        ).join(
+            Sale, Sale.id == SaleItem.sale_id
+        )
+        
+        # Apply same filters as main query to subquery
+        if start_date:
+            top_products_query = top_products_query.filter(Sale.sale_date >= start_date_obj)
+        if end_date:
+            top_products_query = top_products_query.filter(Sale.sale_date <= end_date_obj)
+        if store_id:
+            top_products_query = top_products_query.filter(Sale.store_id == store_id)
+        if payment_status:
+            top_products_query = top_products_query.filter(Sale.payment_status == payment_status)
+        if current_user.role == 'sotuvchi':
+            top_products_query = top_products_query.filter(Sale.user_id == current_user.id)
+        
+        top_products = []
+        for name, quantity, revenue in top_products_query.group_by(Product_alias.name).order_by(func.sum(SaleItem.quantity).desc()).limit(5).all():
+            top_products.append({
+                'name': name or 'Noma\'lum',
+                'quantity': float(quantity or 0),
+                'revenue': float(revenue or 0)
+            })
+
+        # Store performance - SQL aggregate bilan optimal
+        Store_alias = aliased(Store)
+        
+        store_perf_query = db.session.query(
+            Store_alias.name,
+            func.count(Sale.id).label('sales'),
+            func.sum(Sale.total_amount).label('revenue'),
+            func.sum(Sale.total_profit).label('profit')
+        ).join(
+            Sale, Sale.store_id == Store_alias.id
+        )
+        
+        # Apply same filters
+        if start_date:
+            store_perf_query = store_perf_query.filter(Sale.sale_date >= start_date_obj)
+        if end_date:
+            store_perf_query = store_perf_query.filter(Sale.sale_date <= end_date_obj)
+        if store_id:
+            store_perf_query = store_perf_query.filter(Sale.store_id == store_id)
+        if payment_status:
+            store_perf_query = store_perf_query.filter(Sale.payment_status == payment_status)
+        if current_user.role == 'sotuvchi':
+            store_perf_query = store_perf_query.filter(Sale.user_id == current_user.id)
+        
+        store_performance = []
+        for name, sales_count, revenue, profit in store_perf_query.group_by(Store_alias.name).order_by(func.sum(Sale.total_amount).desc()).all():
+            store_performance.append({
+                'name': name or 'Noma\'lum',
+                'sales': sales_count,
+                'revenue': float(revenue or 0),
+                'profit': float(profit or 0)
+            })
 
         sales_list = [sale.to_dict() for sale in sales]
         logger.debug(f" API javobida yuborilayotgan sales: {len(sales_list)} ta")
