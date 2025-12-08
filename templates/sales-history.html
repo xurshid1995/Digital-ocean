@@ -1725,8 +1725,16 @@ async function loadSalesHistory(page = 1) {
         console.log('🔄 Real API ma\'lumotlari yuklanmoqda...');
         
         // Sana filtrlarini olish
-        const dateFrom = document.getElementById('dateFromFilter')?.value || '';
-        const dateTo = document.getElementById('dateToFilter')?.value || '';
+        const dateFromInput = document.getElementById('dateFromFilter');
+        const dateToInput = document.getElementById('dateToFilter');
+        
+        console.log('📅 DEBUG: dateFromInput:', dateFromInput);
+        console.log('📅 DEBUG: dateFromInput.value:', dateFromInput?.value);
+        console.log('📅 DEBUG: dateToInput:', dateToInput);
+        console.log('📅 DEBUG: dateToInput.value:', dateToInput?.value);
+        
+        const dateFrom = dateFromInput?.value || '';
+        const dateTo = dateToInput?.value || '';
         
         // URL parametrlarini yaratish
         let apiUrl = `/api/sales-history?page=${page}&per_page=${itemsPerPage}`;
