@@ -3839,10 +3839,20 @@
         const currentCartQuantity = existingItem ? existingItem.quantity : 0;
         const totalQuantity = currentCartQuantity + quantity;
         
+        // Agar mahsulot korzinada mavjud bo'lsa, har doim ogohlantirish
+        if (currentCartQuantity > 0) {
+            const locationText = tabData.selectedProduct.location_type === 'warehouse' ? 'omborda' : 'do\'konda';
+            const confirmMsg = `⚠️ Bu mahsulot korzinada allaqachon mavjud (${currentCartQuantity} ta).\n\nYangi miqdor qo'shiladi: +${quantity} ta\nJami bo'ladi: ${totalQuantity} ta\n\nDavom etishni xohlaysizmi?`;
+            
+            if (!confirm(confirmMsg)) {
+                return; // Foydalanuvchi bekor qildi
+            }
+        }
+        
+        // Stock yetarliligini tekshirish
         if (totalQuantity > availableQty) {
             const locationText = tabData.selectedProduct.location_type === 'warehouse' ? 'omborda' : 'do\'konda';
-            const currentInfo = currentCartQuantity > 0 ? ` Korzinada allaqachon ${currentCartQuantity} ta bor.` : '';
-            alert(`Xato! ${locationText} maksimal ${availableQty} ta mahsulot mavjud.${currentInfo}`);
+            alert(`Xato! ${locationText} maksimal ${availableQty} ta mahsulot mavjud. Korzinada allaqachon ${currentCartQuantity} ta bor.`);
             return;
         }
         
