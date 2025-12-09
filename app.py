@@ -847,6 +847,28 @@ class Sale(db.Model):
 
 
 # Valyuta kursi modeli
+class StockChange(db.Model):
+    """Stock o'zgarishlari tarixi - qo'shish, ayirish, transfer"""
+    __tablename__ = 'stock_changes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    action = db.Column(db.String(20), nullable=False)  # 'add', 'deduct', 'transfer', 'sale'
+    quantity = db.Column(db.DECIMAL(precision=15, scale=3), nullable=False)
+    location_type = db.Column(db.String(20), nullable=False)  # 'warehouse' or 'store'
+    warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'), nullable=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('stores.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    change_date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    notes = db.Column(db.Text, nullable=True)
+    
+    # Relationships
+    product = db.relationship('Product', backref='stock_changes')
+    warehouse = db.relationship('Warehouse', backref='stock_changes')
+    store = db.relationship('Store', backref='stock_changes')
+    user = db.relationship('User', backref='stock_changes')
+
+
 class CurrencyRate(db.Model):
     __tablename__ = 'currency_rates'
 
@@ -1485,71 +1507,57 @@ def api_batch_products():
 # Mahsulot qo'shish tarixi API
 @app.route('/api/products/history', methods=['GET'])
 def get_product_history():
-    """Qo'shilgan mahsulotlar tarixini olish - Product va Stock jadvallaridan"""
+    """Qo'shilgan mahsulotlar tarixini olish - StockChange jadvalidan"""
     try:
-        # Oxirgi 50 ta mahsulot
+        # Oxirgi 50 ta qo'shish operatsiyalari
         limit = int(request.args.get('limit', 50))
 
-        # Mahsulotlarni yaratilish sanasi bo'yicha olish
-        products = Product.query.order_by(
-            Product.created_at.desc()
+        # StockChange jadvalidan faqat 'add' actionlarni olish
+        stock_changes = StockChange.query.filter_by(
+            action='add'
+        ).order_by(
+            StockChange.change_date.desc()
         ).limit(limit).all()
 
         history_data = []
-        for product in products:
-            # Har bir mahsulot uchun hozirgi stock ma'lumotlarini olish
-            warehouse_stocks = WarehouseStock.query.filter_by(
-                product_id=product.id
-            ).all()
-            store_stocks = StoreStock.query.filter_by(
-                product_id=product.id
-            ).all()
+        for change in stock_changes:
+            # Mahsulot ma'lumotlarini olish
+            product = Product.query.get(change.product_id)
+            if not product:
+                continue
 
-            total_quantity = 0
-            locations = []
+            # Joylashuv ma'lumotlarini olish
+            location_name = 'Noma\'lum'
+            location_type = 'Noma\'lum'
+            
+            if change.location_type == 'warehouse' and change.warehouse_id:
+                warehouse = Warehouse.query.get(change.warehouse_id)
+                location_name = warehouse.name if warehouse else 'Noma\'lum Ombor'
+                location_type = 'Ombor'
+            elif change.location_type == 'store' and change.store_id:
+                store = Store.query.get(change.store_id)
+                location_name = store.name if store else 'Noma\'lum Do\'kon'
+                location_type = 'Do\'kon'
 
-            # Ombor stocklari
-            for stock in warehouse_stocks:
-                if stock.quantity > 0:  # Faqat mavjud stocklar
-                    total_quantity += float(stock.quantity)
-                    locations.append({
-                        'type': 'Ombor',
-                        'name': stock.warehouse.name,
-                        'quantity': float(stock.quantity)
-                    })
-
-            # Do'kon stocklari
-            for stock in store_stocks:
-                if stock.quantity > 0:  # Faqat mavjud stocklar
-                    total_quantity += float(stock.quantity)
-                    locations.append({
-                        'type': 'Do\'kon',
-                        'name': stock.store.name,
-                        'quantity': float(stock.quantity)
-                    })
-
-            # Agar stock yo'q bo'lsa ham mahsulotni ko'rsatish
-            if not locations:
-                locations.append({
-                    'type': 'Yo\'q',
-                    'name': 'Hech qayerda yo\'q',
-                    'quantity': 0
-                })
-
-            # Jami qiymat hisoblash
-            total_value = total_quantity * float(product.cost_price)
+            # Qo'shilgan miqdor va qiymat
+            quantity = float(change.quantity)
+            total_value = quantity * float(product.cost_price)
 
             history_data.append({
                 'id': product.id,
                 'name': product.name,
                 'cost_price': float(product.cost_price),
                 'sell_price': float(product.sell_price),
-                'total_quantity': total_quantity,
+                'total_quantity': quantity,
                 'total_value': total_value,
-                'locations': locations,
-                'created_date': (product.created_at.isoformat()
-                                if product.created_at else None),
-                'added_by': 'Admin'  # TODO: User tracking qo'shish kerak
+                'locations': [{
+                    'type': location_type,
+                    'name': location_name,
+                    'quantity': quantity
+                }],
+                'created_date': (change.change_date.isoformat()
+                                if change.change_date else None),
+                'added_by': change.user.username if change.user else 'Admin'
             })
 
         return jsonify({
