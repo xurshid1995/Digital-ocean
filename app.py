@@ -1485,58 +1485,57 @@ def api_batch_products():
 # Mahsulot qo'shish tarixi API
 @app.route('/api/products/history', methods=['GET'])
 def get_product_history():
-    """Qo'shilgan mahsulotlar tarixini olish"""
+    """Qo'shilgan mahsulotlar tarixini olish - StockChange jadvalidan"""
     try:
-        # Oxirgi 50 ta yozuv
+        # Oxirgi 50 ta qo'shish (add) operatsiyalari
         limit = int(request.args.get('limit', 50))
 
-        # Mahsulotlarni yaratilish sanasi bo'yicha tartiblab olish
-        products = Product.query.order_by(
-            Product.created_at.desc()).limit(limit).all()
+        # StockChange jadvalidan faqat 'add' actionlarni olish
+        stock_changes = StockChange.query.filter_by(
+            action='add'
+        ).order_by(
+            StockChange.change_date.desc()
+        ).limit(limit).all()
 
         history_data = []
-        for product in products:
-            # Har bir mahsulot uchun stock ma'lumotlarini olish
-            warehouse_stocks = WarehouseStock.query.filter_by(
-                product_id=product.id).all()
-            store_stocks = StoreStock.query.filter_by(
-                product_id=product.id).all()
+        for change in stock_changes:
+            # Mahsulot ma'lumotlarini olish
+            product = Product.query.get(change.product_id)
+            if not product:
+                continue
 
-            total_quantity = 0
-            locations = []
+            # Joylashuv ma'lumotlarini olish
+            location_name = 'Noma\'lum'
+            location_type = change.location_type or 'unknown'
+            
+            if change.location_type == 'warehouse' and change.warehouse_id:
+                warehouse = Warehouse.query.get(change.warehouse_id)
+                location_name = warehouse.name if warehouse else 'Noma\'lum Ombor'
+                location_type = 'Ombor'
+            elif change.location_type == 'store' and change.store_id:
+                store = Store.query.get(change.store_id)
+                location_name = store.name if store else 'Noma\'lum Do\'kon'
+                location_type = 'Do\'kon'
 
-            # Ombor stocklari
-            for stock in warehouse_stocks:
-                total_quantity += float(stock.quantity)
-                locations.append({
-                    'type': 'Ombor',
-                    'name': stock.warehouse.name,
-                    'quantity': float(stock.quantity)
-                })
-
-            # Do'kon stocklari
-            for stock in store_stocks:
-                total_quantity += float(stock.quantity)
-                locations.append({
-                    'type': 'Do\'kon',
-                    'name': stock.store.name,
-                    'quantity': float(stock.quantity)
-                })
-
-            # Jami qiymat hisoblash
-            total_value = total_quantity * float(product.cost_price)
+            # Jami qiymat hisoblash (qo'shilgan miqdor * tan narx)
+            quantity = float(change.quantity)
+            total_value = quantity * float(product.cost_price)
 
             history_data.append({
                 'id': product.id,
                 'name': product.name,
                 'cost_price': float(product.cost_price),
                 'sell_price': float(product.sell_price),
-                'min_stock': product.min_stock,
-                'total_quantity': total_quantity,
+                'total_quantity': quantity,
                 'total_value': total_value,
-                'locations': locations,
-                'created_date': (product.created_at.isoformat()
-                                if product.created_at else None)
+                'locations': [{
+                    'type': location_type,
+                    'name': location_name,
+                    'quantity': quantity
+                }],
+                'created_date': (change.change_date.isoformat()
+                                if change.change_date else None),
+                'added_by': change.user.username if change.user else 'Noma\'lum'
             })
 
         return jsonify({
