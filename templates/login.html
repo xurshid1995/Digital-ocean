@@ -46,15 +46,17 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(2px);
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(3px);
     }
 
     .login-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 16px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         padding: 3rem;
         width: 100%;
         max-width: 400px;
@@ -68,16 +70,18 @@
     }
 
     .login-header h1 {
-        color: #333;
+        color: #ffffff;
         font-size: 2rem;
         margin: 0 0 0.5rem 0;
         font-weight: 600;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
     .login-header p {
-        color: #666;
+        color: rgba(255, 255, 255, 0.9);
         margin: 0;
         font-size: 1rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
     .form-group {
@@ -89,9 +93,10 @@
     .form-group label {
         display: block;
         margin-bottom: 0.5rem;
-        color: #333;
+        color: rgba(255, 255, 255, 0.95);
         font-weight: 500;
         font-size: 0.95rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
     .password-wrapper {
@@ -107,7 +112,7 @@
         border: none;
         cursor: pointer;
         font-size: 1.2rem;
-        color: #666;
+        color: rgba(255, 255, 255, 0.7);
         padding: 0;
         width: 30px;
         height: 30px;
@@ -118,23 +123,31 @@
     }
 
     .password-toggle:hover {
-        color: #667eea;
+        color: rgba(255, 255, 255, 1);
     }
 
     .form-control {
         width: 100%;
         padding: 0.875rem 1rem;
-        border: 2px solid #e1e5e9;
-        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
         font-size: 1rem;
+        color: #ffffff;
         transition: all 0.3s ease;
         box-sizing: border-box;
+        backdrop-filter: blur(10px);
+    }
+
+    .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.6);
     }
 
     .form-control:focus {
         outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        background: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
     }
 
     .form-control.error {
@@ -152,20 +165,23 @@
     .btn-login {
         width: 100%;
         padding: 0.875rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(10px);
         color: white;
-        border: none;
-        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
         font-size: 1rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
         margin-top: 1rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
 
     .btn-login:hover {
+        background: rgba(255, 255, 255, 0.35);
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
     }
 
     .btn-login:active {
@@ -190,20 +206,23 @@
     .remember-me {
         display: flex;
         align-items: center;
+        color: rgba(255, 255, 255, 0.9);
     }
 
     .remember-me input {
         margin-right: 0.5rem;
+        cursor: pointer;
     }
 
     .forgot-password {
-        color: #667eea;
+        color: rgba(255, 255, 255, 0.9);
         text-decoration: none;
         transition: color 0.3s;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
     .forgot-password:hover {
-        color: #764ba2;
+        color: #ffffff;
         text-decoration: underline;
     }
 
