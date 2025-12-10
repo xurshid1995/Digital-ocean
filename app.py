@@ -1325,6 +1325,7 @@ def check_product_name():
 def api_add_product():
     try:
         data = request.get_json()
+        logger.info(f"📦 Mahsulot qo'shish so'rovi: {data}")
 
         # Bir nechta mahsulotlar uchun
         if 'products' in data:
@@ -1333,6 +1334,7 @@ def api_add_product():
                 cost_price = Decimal(str(product_data['costPrice']))
                 sell_price = Decimal(str(product_data['sellPrice']))
                 quantity = product_data.get('quantity', 0)
+                logger.info(f"📊 Mahsulot: {product_data['name']}, Miqdor: {quantity}, Location: {product_data.get('locationValue', 'N/A')}")
 
                 # Validatsiya
                 if sell_price < cost_price:
@@ -1409,6 +1411,7 @@ def api_add_product():
                             db.session.add(warehouse_stock)
                 
                 # History yozuvi yaratish (faqat ma'lumot uchun)
+                logger.info(f"🔍 History check: quantity={quantity}, location_name='{location_name}', location_type='{location_type_str}'")
                 if quantity > 0 and location_name:
                     current_user_name = None
                     if 'user_id' in session:
@@ -1426,6 +1429,9 @@ def api_add_product():
                         added_by=current_user_name
                     )
                     db.session.add(history)
+                    logger.info(f"✅ History yozuvi yaratildi: {product.name}, {quantity} ta, {location_name}")
+                else:
+                    logger.warning(f"⚠️ History yaratilmadi: quantity={quantity}, location_name='{location_name}'")
 
                 created_products.append(product)
 
