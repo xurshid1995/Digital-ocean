@@ -67,11 +67,23 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
 
+# Database Connection Pool - API timeout muammosini hal qilish
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,          # Maksimal 10 ta active connection
+    'pool_recycle': 3600,     # Har 1 soatda connection yangilash
+    'pool_pre_ping': True,    # Connection alive ekanini tekshirish (dead connection oldini oladi)
+    'max_overflow': 20,       # Qo'shimcha 20 ta temporary connection
+    'pool_timeout': 30,       # Connection olish uchun 30 sekund timeout
+    'connect_args': {
+        'connect_timeout': 10  # PostgreSQL connection timeout
+    }
+}
+
 # Session xavfsizligi
 app.config['SESSION_COOKIE_SECURE'] = False  # HTTPS yo'q, shuning uchun False
 app.config['SESSION_COOKIE_HTTPONLY'] = True  # JavaScript orqali o'qib bo'lmaydi
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF himoyasi
-app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 soat
+app.config['PERMANENT_SESSION_LIFETIME'] = 28800  # 8 soat (ish kuni)
 
 # SQLAlchemy obyektini yaratish
 db = SQLAlchemy(app)
@@ -7508,6 +7520,22 @@ def inject_settings():
             'stock_check_visible': True,
             'config': app.config
         }
+
+
+# Session Cleanup - memory leak va connection exhaustion muammosini hal qilish
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    """Har bir request'dan keyin session cleanup - connection pool'ga qaytarish"""
+    try:
+        if exception:
+            # Agar xato bo'lgan bo'lsa, rollback qilish
+            db.session.rollback()
+            app.logger.warning(f"Request exception, session rollback: {exception}")
+        # Session'ni tozalash va connection'ni pool'ga qaytarish
+        db.session.remove()
+    except Exception as e:
+        # Cleanup jarayonida xato bo'lsa, log qilish lekin crash qilmaslik
+        app.logger.error(f"Session cleanup error: {e}")
 
 
 if __name__ == '__main__':
