@@ -1366,9 +1366,9 @@ def api_add_product():
                     
                     logger.info(f"📊 Mavjud mahsulot yangilanmoqda:")
                     logger.info(f"   Eski tan narx: ${existing_product.cost_price}")
-                    logger.info(f"   Frontend dan kelgan (allaqachon ortacha): ${cost_price}")
+                    logger.info(f"   Frontend dan kelgan (foydalanuvchi kiritgan): ${cost_price}")
                     
-                    # Frontend'dan kelgan ortacha narxni to'g'ridan-to'g'ri o'rnatish
+                    # Frontend'dan kelgan narxni to'g'ridan-to'g'ri o'rnatish
                     existing_product.cost_price = cost_price
                     
                     # Oxirgi partiya ma'lumotlarini saqlash
