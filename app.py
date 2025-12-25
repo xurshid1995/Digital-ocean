@@ -4050,9 +4050,12 @@ def get_customers():
         if not current_user:
             return jsonify({'error': 'Foydalanuvchi topilmadi'}), 401
 
+        # Qidiruv parametrini olish
+        search = request.args.get('search', '').strip()
+
         # Debug ma'lumotlari
         print(
-            f"🔍 Customers API - User: {current_user.username}, Role: {current_user.role}")
+            f"🔍 Customers API - User: {current_user.username}, Role: {current_user.role}, Search: {search}")
         logger.debug(f" Allowed locations: {current_user.allowed_locations}")
 
         # Mijozlarni joylashuv bo'yicha filterlash
@@ -4069,8 +4072,23 @@ def get_customers():
                 
                 if allowed_store_ids:
                     # Faqat ruxsat berilgan do'konlardagi mijozlar
-                    customers = Customer.query.filter(
-                        Customer.store_id.in_(allowed_store_ids)).all()
+                    query = Customer.query.filter(
+                        Customer.store_id.in_(allowed_store_ids))
+                    
+                    # Qisman so'zlar bilan qidirish
+                    if search:
+                        search_words = search.lower().split()
+                        for word in search_words:
+                            if word:
+                                query = query.filter(
+                                    db.or_(
+                                        Customer.name.ilike(f'%{word}%'),
+                                        Customer.phone.ilike(f'%{word}%'),
+                                        Customer.email.ilike(f'%{word}%')
+                                    )
+                                )
+                    
+                    customers = query.all()
                     print(
                         f"🔍 Found {len(customers)} customers in allowed stores")
                 else:
@@ -4082,7 +4100,22 @@ def get_customers():
                 logger.debug(" No allowed locations, returning empty customer list")
         else:
             # Admin barcha mijozlarni ko'radi
-            customers = Customer.query.all()
+            query = Customer.query
+            
+            # Qisman so'zlar bilan qidirish
+            if search:
+                search_words = search.lower().split()
+                for word in search_words:
+                    if word:
+                        query = query.filter(
+                            db.or_(
+                                Customer.name.ilike(f'%{word}%'),
+                                Customer.phone.ilike(f'%{word}%'),
+                                Customer.email.ilike(f'%{word}%')
+                            )
+                        )
+            
+            customers = query.all()
             logger.debug(f" Admin user, returning all {len(customers)} customers")
 
         result = [customer.to_dict() for customer in customers]
