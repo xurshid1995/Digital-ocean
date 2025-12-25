@@ -1019,9 +1019,15 @@ def api_products():
         db.joinedload(Product.store_stocks)
     )
 
-    # Search filter
+    # Search filter - qisman so'zlar bilan qidirish
     if search:
-        query = query.filter(Product.name.ilike(f'%{search}%'))
+        # Qidiruv so'zlarini bo'laklarga ajratish
+        search_words = search.lower().split()
+        
+        # Har bir so'z uchun filter qo'shish (barcha so'zlar mahsulot nomida bo'lishi kerak)
+        for word in search_words:
+            if word:  # Bo'sh so'zlarni o'tkazib yuborish
+                query = query.filter(Product.name.ilike(f'%{word}%'))
 
     # Location filter
     if location_filter and location_filter != 'all':
