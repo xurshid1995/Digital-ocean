@@ -2635,25 +2635,14 @@
             return text;
         }
         
-        // HTML maxsus belgilarini escape qilish
-        const escapeHtml = (str) => {
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
-        };
-        
-        // Matnni avval escape qilish
-        let highlightedText = escapeHtml(text);
-        
         // Qidiruv so'zlarini ajratish
         const searchWords = searchTerm.trim().split(/\s+/);
+        let highlightedText = text;
         
         // Har bir so'zni highlight qilish
         searchWords.forEach(word => {
             if (word) {
-                // Qidiruv so'zini ham escape qilish
-                const escapedWord = escapeHtml(word);
-                const regex = new RegExp(`(${escapedWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                const regex = new RegExp(`(${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
                 highlightedText = highlightedText.replace(regex, '<span class="search-highlight">$1</span>');
             }
         });
@@ -2861,10 +2850,15 @@
 
         let dropdownHtml = '';
         customers.forEach((customer, index) => {
+            // Qidiruv matnini highlight qilish
+            const highlightedName = highlightSearchText(customer.name, searchTerm);
+            const highlightedPhone = customer.phone ? highlightSearchText(customer.phone, searchTerm) : 'N/A';
+            const highlightedEmail = customer.email ? highlightSearchText(customer.email, searchTerm) : 'N/A';
+            
             dropdownHtml += `
                 <div class="dropdown-item" data-customer-id="${customer.id}" onclick="selectCustomer(${customer.id}, '${currentTabId}')">
-                    <strong>${customer.name}</strong><br>
-                    <small>Tel: ${customer.phone || 'N/A'} | Email: ${customer.email || 'N/A'}</small>
+                    <strong>${highlightedName}</strong><br>
+                    <small>Tel: ${highlightedPhone} | Email: ${highlightedEmail}</small>
                 </div>
             `;
         });
@@ -3279,13 +3273,16 @@
             const quantityText = product.location_type === 'warehouse' ? `Omborda: ${availableQty}` : `${availableQty}`;
             const uzsPrice = Math.round((product.price || 0) * USD_TO_UZS_RATE);
             
+            // Qidiruv matnini highlight qilish
+            const highlightedName = highlightSearchText(product.name, searchTerm);
+            
             // Mahsulot ma'lumotlarini JSON formatda saqlash
             const productDataJson = JSON.stringify(product).replace(/"/g, '&quot;');
             
             dropdownHtml += `
                 <div class="product-dropdown-item" data-product-id="${product.id}" data-product-data="${productDataJson}" onclick="selectProductFromDropdown(this, '${currentTabId}')">
                     <div class="product-dropdown-content" style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="color: #2c3e50; font-size: 1.1rem;">${product.name}</strong>
+                        <strong style="color: #2c3e50; font-size: 1.1rem;">${highlightedName}</strong>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <span style="color: #28a745; font-weight: 600;">$${product.price || '0.00'} / ${uzsPrice.toLocaleString()} So'm</span>
                             <span class="quantity-badge" style="color: white !important; background-color: #28a745; padding: 2px 6px; border-radius: 3px; font-weight: 600;">${quantityText}</span>
