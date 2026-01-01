@@ -318,7 +318,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         showHistorySection();
                         console.log('✅ Tarix bo\'limi ko\'rsatildi (filtrlangan:', filteredHistory.length, 'ta)');
                     } else {
-                        console.log('⏸️ Filtrlangan tarix bo\'sh, tarix ko\'rsatilmaydi');
+                        hideHistorySection();
+                        console.log('⏸️ Filtrlangan tarix bo\'sh, tarix yashirildi');
                     }
                 }
             }
