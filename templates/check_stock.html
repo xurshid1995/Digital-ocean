@@ -296,6 +296,19 @@ document.addEventListener('DOMContentLoaded', function() {
     if (locationSelect) {
         locationSelect.addEventListener('change', function() {
             autoSave();
+            
+            // Tekshiruv faol emasligini tekshirish
+            const savedState = localStorage.getItem('stockCheckState');
+            const isCheckingActive = savedState !== null;
+            
+            // Agar tekshiruv faol bo'lmasa va tarix mavjud bo'lsa, ko'rsatish
+            if (!isCheckingActive) {
+                const history = getCheckHistory();
+                if (history.length > 0) {
+                    showHistorySection();
+                }
+            }
+            
             // Tarix jadvalini filtrlash
             refreshHistoryTable();
         });
@@ -2614,25 +2627,30 @@ function getCheckHistory() {
 // Tarix jadvalini yangilash
 function refreshHistoryTable() {
     const history = getCheckHistory();
+    console.log('🔄 refreshHistoryTable: Jami tarix:', history.length);
 
     const tbody = document.getElementById('historyTableBody');
     
     // Joylashuv filtrini tekshirish
     const locationSelect = document.getElementById('locationSelect');
     const selectedLocation = locationSelect ? locationSelect.options[locationSelect.selectedIndex]?.text : null;
+    console.log('📍 Tanlangan joylashuv:', selectedLocation);
     
     // Filtrlangan tarixni olish
     let filteredHistory = history;
-    if (selectedLocation && selectedLocation !== 'Joylashuvni tanlang') {
-        filteredHistory = history.filter(item => item.location === selectedLocation);
-
+    if (selectedLocation && selectedLocation !== 'Joylashuvni tanlang...') {
+        filteredHistory = history.filter(item => {
+            console.log(`  Solishtirish: "${item.location}" === "${selectedLocation}" ?`, item.location === selectedLocation);
+            return item.location === selectedLocation;
+        });
+        console.log('✅ Filtrlangan tarix:', filteredHistory.length);
     }
     
     if (filteredHistory.length === 0) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="6" style="padding: 2rem; text-align: center; color: #6c757d;">
-                    ${selectedLocation && selectedLocation !== 'Joylashuvni tanlang' 
+                    ${selectedLocation && selectedLocation !== 'Joylashuvni tanlang...' 
                         ? `"${selectedLocation}" joylashuvi uchun tekshiruv tarixi topilmadi`
                         : 'Hali hech qanday tekshiruv amalga oshirilmagan'
                     }
@@ -2784,16 +2802,26 @@ function handleStatisticsTableClick(event) {
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         const history = getCheckHistory();
+        console.log('📊 DOMContentLoaded - Tarix tekshirilmoqda:', history.length, 'ta element');
+        
         if (history.length > 0) {
             refreshHistoryTable();
             
-            // Faqat tekshiruv faol bo'lmagan holatde tarixni ko'rsatish
-            const button = document.getElementById('startStopButton');
-            const isCheckingActive = button && button.innerHTML.includes('Tekshiruvni tugatish');
+            // Tekshiruv holatini tekshirish - localStorage'dan
+            const savedState = localStorage.getItem('stockCheckState');
+            const isCheckingActive = savedState !== null;
             
+            console.log('📊 Tekshiruv holati:', isCheckingActive ? 'Faol' : 'Faol emas');
+            
+            // Tekshiruv faol bo'lmasa, tarixni ko'rsatish
             if (!isCheckingActive) {
                 showHistorySection();
+                console.log('✅ Tarix bo\'limi ko\'rsatildi');
+            } else {
+                console.log('⏸️ Tekshiruv faol, tarix yashirilgan');
             }
+        } else {
+            console.log('📊 Tarix bo\'sh, tarix bo\'limi ko\'rsatilmaydi');
         }
     }, 500);
 });

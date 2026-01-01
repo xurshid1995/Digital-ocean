@@ -301,6 +301,22 @@
         box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         outline: none;
     }
+    
+    /* Miqdor validatsiya stillari */
+    .form-input.valid {
+        border-color: #28a745 !important;
+        background-color: #f0fff4 !important;
+    }
+    
+    .form-input.invalid {
+        border-color: #dc3545 !important;
+        background-color: #fff5f5 !important;
+    }
+    
+    .form-input.warning {
+        border-color: #ffc107 !important;
+        background-color: #fffbf0 !important;
+    }
 
     /* Mahsulot qidirish dropdown */
     .product-search-container {
@@ -2447,7 +2463,10 @@
                             </div>
                             <div class="form-group" style="margin: 0;">
                                 <label for="quantity-{TAB_ID}" style="font-size: 0.85rem; color: #666;">📦 Miqdor:</label>
-                                <input type="number" id="quantity-{TAB_ID}" class="form-input" placeholder="0" min="0" onkeydown="if(event.key==='Enter') addSelectedProduct('{TAB_ID}')">
+                                <input type="number" id="quantity-{TAB_ID}" class="form-input" placeholder="0" min="0" 
+                                       oninput="validateQuantityRealtime('{TAB_ID}')" 
+                                       onkeydown="if(event.key==='Enter') addSelectedProduct('{TAB_ID}')">
+                                <small id="quantityError-{TAB_ID}" style="color: #dc3545; font-size: 0.75rem; display: none; margin-top: 0.25rem;"></small>
                             </div>
                         </div>
                     </div>
@@ -3423,6 +3442,76 @@
                 quantityInput.select(); // Agar oldingi qiymat bo'lsa, uni tanlab qo'yish
             }
         }, 100);
+    }
+    
+    // Real-time miqdor validatsiyasi
+    function validateQuantityRealtime(tabId) {
+        const currentTabId = tabId || activeTabId;
+        if (!currentTabId) return;
+        
+        const tabData = tabs[currentTabId];
+        if (!tabData) return;
+        
+        const quantityInput = document.getElementById(`quantity-${currentTabId}`);
+        const errorElement = document.getElementById(`quantityError-${currentTabId}`);
+        const addButton = document.getElementById(`addButton-${currentTabId}`);
+        
+        if (!quantityInput || !errorElement) return;
+        
+        const inputValue = parseFloat(quantityInput.value);
+        
+        // Bo'sh yoki 0 bo'lsa xatolik ko'rsatmaslik
+        if (!quantityInput.value || inputValue === 0) {
+            errorElement.style.display = 'none';
+            quantityInput.style.borderColor = '';
+            quantityInput.style.backgroundColor = '';
+            if (addButton) addButton.disabled = false;
+            return;
+        }
+        
+        // Mahsulot tanlanmaganligini tekshirish
+        if (!tabData.selectedProduct && !tabData.currentEditingItem) {
+            errorElement.textContent = '⚠️ Avval mahsulot tanlang';
+            errorElement.style.display = 'block';
+            quantityInput.style.borderColor = '#dc3545';
+            quantityInput.style.backgroundColor = '#fff5f5';
+            if (addButton) addButton.disabled = true;
+            return;
+        }
+        
+        // Mavjud miqdorni olish
+        let availableQty = 0;
+        if (tabData.currentEditingItem) {
+            // Tahrirlash rejimida
+            const stockQty = tabData.selectedProduct?.available_quantity || tabData.selectedProduct?.total_stock || 0;
+            const originalQty = tabData.originalQuantities?.[tabData.currentEditingItem.id] || 0;
+            availableQty = stockQty + originalQty;
+        } else if (tabData.selectedProduct) {
+            // Oddiy qo'shish rejimida
+            availableQty = tabData.selectedProduct.available_quantity || tabData.selectedProduct.total_stock || 0;
+        }
+        
+        // Validatsiya
+        if (inputValue < 0) {
+            errorElement.textContent = '⚠️ Miqdor manfiy bo\'lishi mumkin emas';
+            errorElement.style.display = 'block';
+            quantityInput.style.borderColor = '#dc3545';
+            quantityInput.style.backgroundColor = '#fff5f5';
+            if (addButton) addButton.disabled = true;
+        } else if (inputValue > availableQty) {
+            const locationText = tabData.selectedProduct?.location_type === 'warehouse' ? 'omborda' : 'do\'konda';
+            errorElement.textContent = `⚠️ ${locationText} faqat ${availableQty} ta mavjud`;
+            errorElement.style.display = 'block';
+            quantityInput.style.borderColor = '#ffc107';
+            quantityInput.style.backgroundColor = '#fffbf0';
+            if (addButton) addButton.disabled = true;
+        } else {
+            // To'g'ri qiymat
+            errorElement.style.display = 'none';
+            quantityInput.style.borderColor = '#28a745';
+            quantityInput.style.backgroundColor = '#f0fff4';
+            if (addButton) addButton.disabled = false;
+        }
     }
     
     // Fallback: mahsulot ID orqali server'dan ma'lumot olish
