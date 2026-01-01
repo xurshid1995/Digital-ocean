@@ -2796,7 +2796,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (history.length > 0) {
             // Tekshiruv holatini tekshirish - localStorage'dan
             const savedState = localStorage.getItem('stockCheckState');
-            const isCheckingActive = savedState !== null;
+            let isCheckingActive = false;
+            
+            if (savedState) {
+                try {
+                    const pageState = JSON.parse(savedState);
+                    isCheckingActive = pageState.isCheckingActive === true;
+                } catch (error) {
+                    console.error('📊 localStorage parse xatolik:', error);
+                    isCheckingActive = false;
+                }
+            }
             
             console.log('📊 Tekshiruv holati:', isCheckingActive ? 'Faol' : 'Faol emas');
             
