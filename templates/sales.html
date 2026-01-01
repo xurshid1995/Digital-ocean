@@ -3514,6 +3514,121 @@
         }
     }
     
+    // Korzina miqdori uchun real-time validatsiya
+    async function validateCartQuantityRealtime(productId, newQuantity, tabId) {
+        const currentTabId = tabId || activeTabId;
+        if (!currentTabId) return;
+        
+        const tabData = tabs[currentTabId];
+        if (!tabData) return;
+        
+        const item = tabData.cart.find(i => i.id === productId);
+        if (!item) return;
+        
+        // Input elementlarni topish (desktop va mobile)
+        const desktopInput = document.getElementById(`cart-qty-${productId}`);
+        const mobileInput = document.getElementById(`mobile-cart-qty-${productId}`);
+        const desktopError = document.getElementById(`cart-qty-error-${productId}`);
+        const mobileError = document.getElementById(`mobile-cart-qty-error-${productId}`);
+        
+        const inputValue = parseFloat(newQuantity);
+        
+        // Bo'sh yoki 0 bo'lsa xatolik ko'rsatmaslik
+        if (!newQuantity || inputValue === 0) {
+            if (desktopError) desktopError.style.display = 'none';
+            if (mobileError) mobileError.style.display = 'none';
+            if (desktopInput) {
+                desktopInput.style.borderColor = '';
+                desktopInput.style.backgroundColor = '';
+            }
+            if (mobileInput) {
+                mobileInput.style.borderColor = '';
+                mobileInput.style.backgroundColor = '';
+            }
+            return;
+        }
+        
+        // Hozirgi korzinada necha ta borligini olish
+        const currentCartQty = parseInt(item.quantity) || 0;
+        const difference = inputValue - currentCartQty;
+        
+        // Agar tahrirlash rejimida bo'lsa
+        let availableQty = 0;
+        try {
+            // Server'dan real-time stock ma'lumotini olish
+            const response = await fetch(`/api/check-stock/${item.id}/${item.location_id}/${item.location_type}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                availableQty = data.available_quantity || 0;
+                
+                // Tahrirlash rejimida asl miqdorni ham hisobga olish
+                if (tabData.isEditMode && tabData.originalQuantities && tabData.originalQuantities[productId]) {
+                    const originalQty = tabData.originalQuantities[productId] || 0;
+                    availableQty += originalQty;
+                }
+                
+                // Hozirgi korzina miqdorini ham hisobga olish
+                availableQty += currentCartQty;
+            }
+        } catch (error) {
+            console.error('Stock tekshirishda xatolik:', error);
+        }
+        
+        const locationText = item.location_type === 'warehouse' ? 'omborda' : 'do\'konda';
+        
+        // Validatsiya
+        if (inputValue < 0) {
+            const errorMsg = '⚠️ Manfiy bo\'lishi mumkin emas';
+            if (desktopError) {
+                desktopError.textContent = errorMsg;
+                desktopError.style.display = 'block';
+            }
+            if (mobileError) {
+                mobileError.textContent = errorMsg;
+                mobileError.style.display = 'block';
+            }
+            if (desktopInput) {
+                desktopInput.style.borderColor = '#dc3545';
+                desktopInput.style.backgroundColor = '#fff5f5';
+            }
+            if (mobileInput) {
+                mobileInput.style.borderColor = '#dc3545';
+                mobileInput.style.backgroundColor = '#fff5f5';
+            }
+        } else if (inputValue > availableQty && availableQty > 0) {
+            const errorMsg = `⚠️ ${locationText} faqat ${availableQty} ta mavjud`;
+            if (desktopError) {
+                desktopError.textContent = errorMsg;
+                desktopError.style.display = 'block';
+            }
+            if (mobileError) {
+                mobileError.textContent = errorMsg;
+                mobileError.style.display = 'block';
+            }
+            if (desktopInput) {
+                desktopInput.style.borderColor = '#ffc107';
+                desktopInput.style.backgroundColor = '#fffbf0';
+            }
+            if (mobileInput) {
+                mobileInput.style.borderColor = '#ffc107';
+                mobileInput.style.backgroundColor = '#fffbf0';
+            }
+        } else {
+            // To'g'ri qiymat
+            if (desktopError) desktopError.style.display = 'none';
+            if (mobileError) mobileError.style.display = 'none';
+            if (desktopInput) {
+                desktopInput.style.borderColor = '#28a745';
+                desktopInput.style.backgroundColor = '#f0fff4';
+            }
+            if (mobileInput) {
+                mobileInput.style.borderColor = '#28a745';
+                mobileInput.style.backgroundColor = '#f0fff4';
+            }
+        }
+    }
+    
     // Fallback: mahsulot ID orqali server'dan ma'lumot olish
     function selectProductById(productId, tabId) {
         const currentTabId = tabId || activeTabId;
@@ -4268,7 +4383,11 @@
                         <strong>${item.name || 'Noma\'lum'}</strong>
                     </td>
                     <td>
-                        <input type="number" class="qty-input" value="${safeQuantity}" onchange="setQuantity(${item.id}, this.value, '${currentTabId}')" min="1" style="width: 60px; text-align: center;">
+                        <input type="number" class="qty-input" id="cart-qty-${item.id}" value="${safeQuantity}" 
+                               oninput="validateCartQuantityRealtime(${item.id}, this.value, '${currentTabId}')"
+                               onchange="setQuantity(${item.id}, this.value, '${currentTabId}')" 
+                               min="1" style="width: 60px; text-align: center;">
+                        <small id="cart-qty-error-${item.id}" style="color: #dc3545; font-size: 0.7rem; display: none;"></small>
                     </td>
                     <td>${formatPrice(safePrice)}</td>
                     <td><strong>${formatPrice(itemTotal)}</strong></td>
@@ -4342,11 +4461,13 @@
                         <div class="item-actions">
                             <div class="qty-controls">
                                 <button class="qty-btn" onclick="adjustQuantity(${item.id}, -1, '${currentTabId}')">-</button>
-                                <input type="number" class="qty-input" value="${safeQuantity}" 
+                                <input type="number" class="qty-input" id="mobile-cart-qty-${item.id}" value="${safeQuantity}" 
+                                       oninput="validateCartQuantityRealtime(${item.id}, this.value, '${currentTabId}')"
                                        onchange="setQuantity(${item.id}, this.value, '${currentTabId}')" 
                                        min="1">
                                 <button class="qty-btn" onclick="adjustQuantity(${item.id}, 1, '${currentTabId}')">+</button>
                             </div>
+                            <small id="mobile-cart-qty-error-${item.id}" style="color: #dc3545; font-size: 0.7rem; display: none; margin-top: 0.25rem;"></small>
                             <button class="edit-btn" onclick="confirmStartProductEdit(${item.id}, '${currentTabId}')" title="Tahrirlash">
                                 <i class="fas fa-edit"></i> Tahrirlash
                             </button>

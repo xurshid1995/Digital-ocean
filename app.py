@@ -6091,6 +6091,49 @@ def api_reserve_stock():
         logger.error(f" Stock tekshirishda xatolik: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+# API endpoint - Stock miqdorini tekshirish (validatsiya uchun)
+@app.route('/api/check-stock/<int:product_id>/<int:location_id>/<location_type>', methods=['GET'])
+@role_required('admin', 'kassir', 'sotuvchi')
+def api_check_stock(product_id, location_id, location_type):
+    """Mahsulotning mavjud stock miqdorini tekshirish"""
+    try:
+        product = Product.query.get(product_id)
+        if not product:
+            return jsonify({'success': False, 'error': 'Mahsulot topilmadi'}), 404
+
+        available_qty = 0
+        
+        if location_type == 'store':
+            stock = StoreStock.query.filter_by(
+                store_id=location_id,
+                product_id=product_id
+            ).first()
+            if stock:
+                available_qty = stock.quantity
+                
+        elif location_type == 'warehouse':
+            stock = WarehouseStock.query.filter_by(
+                warehouse_id=location_id,
+                product_id=product_id
+            ).first()
+            if stock:
+                available_qty = stock.quantity
+        
+        return jsonify({
+            'success': True,
+            'product_id': product_id,
+            'product_name': product.name,
+            'location_id': location_id,
+            'location_type': location_type,
+            'available_quantity': available_qty
+        })
+
+    except Exception as e:
+        logger.error(f"Stock tekshirishda xatolik: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # API endpoint - Real-time stock qaytarish (korzinadan o'chirilganda)
 
 
