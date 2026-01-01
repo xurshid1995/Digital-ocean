@@ -3280,33 +3280,27 @@ function updateTableForCompactView() {
         const tbody = document.getElementById('salesTableBody');
         tbody.innerHTML = '';
         
-        // Har bir savdo uchun bitta qator (savdo ID bo'yicha guruhlash)
-        const salesGroups = {};
+        // Har bir unique savdo uchun bitta qator (ID bo'yicha dublikatlarni olib tashlash)
+        const uniqueSales = [];
+        const seenIds = new Set();
         
-        console.log('🔍 sortedData sample:', sortedData[0]);
+        console.log('🔍 sortedData birinchi 5 ta sana:', sortedData.slice(0, 5).map(s => s.sale_date));
         
         sortedData.forEach(sale => {
-            console.log('🔍 Sale obyekti:', {
-                id: sale.id,
-                items: sale.items,
-                items_count: sale.items ? sale.items.length : 'items yo\'q'
-            });
-            
-            const saleId = sale.id;
-            if (!salesGroups[saleId]) {
-                salesGroups[saleId] = [];
+            if (!seenIds.has(sale.id)) {
+                seenIds.add(sale.id);
+                uniqueSales.push(sale);
             }
-            salesGroups[saleId].push(sale);
         });
         
-        // Har bir savdo guruhi uchun bitta qator yaratish
-        console.log('🔢 Savdo guruhlari soni:', Object.values(salesGroups).length);
+        console.log('✅ Unique savdolar:', uniqueSales.length);
+        console.log('🔍 Unique savdolar birinchi 5 ta sana:', uniqueSales.slice(0, 5).map(s => s.sale_date));
         
-        Object.values(salesGroups).forEach((items, index) => {
-            if (items.length > 0) {
-                console.log(`📝 ${index + 1}-qator yaratilmoqda:`, items[0]);
-                
-                const firstItem = items[0];
+        // Har bir savdo uchun qator yaratish
+        uniqueSales.forEach((sale, index) => {
+            console.log(`📝 ${index + 1}-qator yaratilmoqda, sana: ${sale.sale_date}, ID: ${sale.id}`);
+            
+            const firstItem = sale;
                 console.log('🔍 firstItem tafsilotlari:', {
                     sale_date: firstItem.sale_date,
                     location_name: firstItem.location_name,
@@ -3369,8 +3363,7 @@ function updateTableForCompactView() {
                         cell.style.display = 'none';
                     });
                 }
-            }
-        });
+            });
         
         // Highlight funksiyalarini qayta ishga tushirish
         highlightSearchResults();
