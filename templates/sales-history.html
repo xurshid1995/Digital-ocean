@@ -1831,15 +1831,15 @@ function displaySalesData(data) {
     const stats = data.statistics || data;
     const salesData = data.sales || [];
     
+    // Har doim yangi savdolar birinchi bo'lishi uchun sortlash
+    const sortedSales = [...salesData].sort((a, b) => {
+        const dateA = new Date(a.sale_date || a.created_at || a.date);
+        const dateB = new Date(b.sale_date || b.created_at || b.date);
+        return dateB - dateA; // DESC tartib - yangi savdolar birinchi
+    });
+    
     // Agar bu yangi ma'lumotlar bo'lsa (filter qo'llanmagan bo'lsa), allSalesData ni yangilash
     if (arguments.length === 1 && !data.isFiltered) {
-        // Yangi savdolar birinchi bo'lishi uchun sortlash
-        const sortedSales = [...salesData].sort((a, b) => {
-            const dateA = new Date(a.sale_date || a.created_at || a.date);
-            const dateB = new Date(b.sale_date || b.created_at || b.date);
-            return dateB - dateA; // DESC tartib - yangi savdolar birinchi
-        });
-        
         allSalesData = sortedSales;
         filteredSalesData = [...sortedSales];
         
@@ -1848,6 +1848,9 @@ function displaySalesData(data) {
         
         // Joylashuvlar ro'yxatini yangilash
         loadLocationsForFilter();
+    } else {
+        // Filtrlangan ma'lumotlar uchun ham sortlangan versiyani ishlatish
+        filteredSalesData = sortedSales;
     }
     
     console.log('📈 Statistikalar:', stats);
@@ -1881,7 +1884,8 @@ function displaySalesData(data) {
     }
     
     let html = '';
-    salesData.forEach(sale => {
+    // Sortlangan ma'lumotlardan foydalanish
+    sortedSales.forEach(sale => {
         const items = sale.items || []; // SaleItems array
         
         // Agar items bo'sh bo'lsa, default item yaratamiz
