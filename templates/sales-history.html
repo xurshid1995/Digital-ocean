@@ -3276,17 +3276,16 @@ function updateTableForCompactView() {
         
         console.log('✅ Ma\'lumotlar sortlandi:', sortedData.map(s => s.sale_date).slice(0, 5));
         
-        // Sortlangan ma'lumotlardan foydalanish
-        filteredSalesData = sortedData;
+        // Sortlangan ma'lumotlarni ishlatish (filteredSalesData o'rniga to'g'ridan-to'g'ri sortedData)
         const tbody = document.getElementById('salesTableBody');
         tbody.innerHTML = '';
         
         // Har bir savdo uchun bitta qator (savdo ID bo'yicha guruhlash)
         const salesGroups = {};
         
-        console.log('🔍 filteredSalesData sample:', filteredSalesData[0]);
+        console.log('🔍 sortedData sample:', sortedData[0]);
         
-        filteredSalesData.forEach(sale => {
+        sortedData.forEach(sale => {
             console.log('🔍 Sale obyekti:', {
                 id: sale.id,
                 items: sale.items,
