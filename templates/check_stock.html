@@ -631,6 +631,7 @@ function displayProducts(data) {
         
         const row = document.createElement('tr');
         row.style.backgroundColor = '#ffffff'; // Oq fon
+        row.dataset.productId = item.product_id; // Product ID ni row'ga qo'shish
         const price = item.sell_price || item.price || 0;
         row.innerHTML = `
             <td style="padding: 0.6rem; border-bottom: 1px solid #eee; font-size: 1.1rem; font-weight: 500;">${item.product_name || item.name}</td>
@@ -1195,6 +1196,7 @@ function savePageState() {
         for (let row of productsTableBody.children) {
             if (row.children.length >= 4) {
                 products.push({
+                    id: row.dataset.productId, // Product ID ni saqlash
                     name: row.children[0].textContent.trim(),
                     price: row.children[1].textContent.trim(),
                     quantity: row.children[2].textContent.trim(),
@@ -1783,12 +1785,25 @@ function restoreProductsTable(productsData) {
     const tbody = document.getElementById('productsTableBody');
     tbody.innerHTML = '';
     
+    // MUHIM: allOriginalProducts ni tiklash (tarix uchun zarur)
+    allOriginalProducts = productsData.map(product => ({
+        id: product.id || String(Date.now() + Math.random()), // ID mavjud bo'lsa ishlatish, yo'qsa generatsiya
+        name: product.name,
+        originalQuantity: parseFloat(product.quantity) || 0,
+        quantity: parseFloat(product.quantity) || 0,
+        isChecked: false // Boshida hech biri tekshirilmagan
+    }));
+    console.log(`      📦 allOriginalProducts tiklandi: ${allOriginalProducts.length} ta mahsulot`);
+    
     // Batch insert uchun fragment ishlatish (tezroq)
     const fragment = document.createDocumentFragment();
     
     productsData.forEach((product, index) => {
         const row = document.createElement('tr');
         row.style.backgroundColor = '#ffffff'; // Oq fon
+        if (product.id) {
+            row.dataset.productId = product.id; // Product ID ni restore qilish
+        }
         row.innerHTML = `
             <td style="padding: 0.6rem; border-bottom: 1px solid #eee; font-size: 1.1rem; font-weight: 500;">${product.name}</td>
             <td style="padding: 0.6rem; text-align: right; border-bottom: 1px solid #eee; font-weight: bold; color: #28a745;">${product.price}</td>
@@ -2050,9 +2065,21 @@ function finalizeFinalStockUpdates(selectedLocation, callback) {
             const realCheckedCount = getCurrentCheckedCount();
             
             // Barcha mahsulotlarni olish (tekshirilgan va tekshirilmagan)
-
-            const allProductsForHistory = getAllProductsForHistory();
-
+            let allProductsForHistory = getAllProductsForHistory();
+            
+            // FALLBACK: Agar allProductsForHistory bo'sh bo'lsa (restore qilingan yoki mahsulotlar yuklanmagan)
+            // Faqat tekshirilgan mahsulotlarni ishlatamiz
+            if (allProductsForHistory.length === 0) {
+                console.warn('⚠️ allProductsForHistory bo\'sh! Faqat tekshirilgan mahsulotlarni ishlatamiz');
+                allProductsForHistory = checkedProducts.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    originalQuantity: p.originalQuantity,
+                    quantity: p.quantity,
+                    isChecked: true
+                }));
+                console.log(`📦 Fallback: ${allProductsForHistory.length} ta tekshirilgan mahsulot tarixga qo'shiladi`);
+            }
 
             allProductsForHistory.forEach((product, index) => {
                 console.log(`  ${index + 1}. ${product.name} - isChecked: ${product.isChecked} (${typeof product.isChecked}), originalQuantity: ${product.originalQuantity}, quantity: ${product.quantity}`);
