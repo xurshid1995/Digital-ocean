@@ -2825,7 +2825,21 @@ function handleStatisticsTableClick(event) {
 // Sahifa yuklanganda tarixni yuklash
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
-        const hi// Joylashuv filtrini tekshirish
+        const history = getCheckHistory();
+        console.log('📊 DOMContentLoaded - Tarix tekshirilmoqda:', history.length, 'ta element');
+        
+        if (history.length > 0) {
+            refreshHistoryTable();
+            
+            // Tekshiruv holatini tekshirish - localStorage'dan
+            const savedState = localStorage.getItem('stockCheckState');
+            const isCheckingActive = savedState !== null;
+            
+            console.log('📊 Tekshiruv holati:', isCheckingActive ? 'Faol' : 'Faol emas');
+            
+            // Tekshiruv faol bo'lmasa, tarixni ko'rsatish
+            if (!isCheckingActive) {
+                // Joylashuv filtrini tekshirish
                 const locationSelect = document.getElementById('locationSelect');
                 const selectedLocation = locationSelect ? locationSelect.options[locationSelect.selectedIndex]?.text : null;
                 let filteredHistory = history;
@@ -2840,21 +2854,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('✅ Tarix bo\'limi ko\'rsatildi');
                 } else {
                     console.log('⏸️ Filtrlangan tarix bo\'sh, tarix ko\'rsatilmaydi');
-                }da:', history.length, 'ta element');
-        
-        if (history.length > 0) {
-            refreshHistoryTable();
-            
-            // Tekshiruv holatini tekshirish - localStorage'dan
-            const savedState = localStorage.getItem('stockCheckState');
-            const isCheckingActive = savedState !== null;
-            
-            console.log('📊 Tekshiruv holati:', isCheckingActive ? 'Faol' : 'Faol emas');
-            
-            // Tekshiruv faol bo'lmasa, tarixni ko'rsatish
-            if (!isCheckingActive) {
-                showHistorySection();
-                console.log('✅ Tarix bo\'limi ko\'rsatildi');
+                }
             } else {
                 console.log('⏸️ Tekshiruv faol, tarix yashirilgan');
             }
