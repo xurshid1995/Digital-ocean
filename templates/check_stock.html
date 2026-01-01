@@ -2646,15 +2646,6 @@ function refreshHistoryTable() {
             </tr>
         `;
         
-        // Agar filtrlangan tarix bo'sh va joylashuv tanlangan bo'lsa, tarix bo'limini yashirish
-        if (selectedLocation && selectedLocation !== 'Joylashuvni tanlang...') {
-            const historySection = document.getElementById('historySection');
-            if (historySection) {
-                historySection.style.display = 'none';
-                console.log('⏸️ Filtrlangan tarix bo\'sh, tarix bo\'limi yashirildi');
-            }
-        }
-        
         return;
     }
     
