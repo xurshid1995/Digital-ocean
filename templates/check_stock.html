@@ -297,33 +297,6 @@ document.addEventListener('DOMContentLoaded', function() {
         locationSelect.addEventListener('change', function() {
             autoSave();
             
-            // Tekshiruv faol emasligini tekshirish
-            const savedState = localStorage.getItem('stockCheckState');
-            const isCheckingActive = savedState !== null;
-            
-            // Agar tekshiruv faol bo'lmasa va tarix mavjud bo'lsa, ko'rsatish
-            if (!isCheckingActive) {
-                const history = getCheckHistory();
-                if (history.length > 0) {
-                    // Avval filtrlangan tarixni tekshirish
-                    const selectedLocation = locationSelect.options[locationSelect.selectedIndex]?.text;
-                    let filteredHistory = history;
-                    
-                    if (selectedLocation && selectedLocation !== 'Joylashuvni tanlang...') {
-                        filteredHistory = history.filter(item => item.location === selectedLocation);
-                    }
-                    
-                    // Faqat filtrlangan tarix mavjud bo'lsa ko'rsatish
-                    if (filteredHistory.length > 0) {
-                        showHistorySection();
-                        console.log('✅ Tarix bo\'limi ko\'rsatildi (filtrlangan:', filteredHistory.length, 'ta)');
-                    } else {
-                        hideHistorySection();
-                        console.log('⏸️ Filtrlangan tarix bo\'sh, tarix yashirildi');
-                    }
-                }
-            }
-            
             // Tarix jadvalini filtrlash
             refreshHistoryTable();
         });
@@ -2830,8 +2803,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('📊 DOMContentLoaded - Tarix tekshirilmoqda:', history.length, 'ta element');
         
         if (history.length > 0) {
-            refreshHistoryTable();
-            
             // Tekshiruv holatini tekshirish - localStorage'dan
             const savedState = localStorage.getItem('stockCheckState');
             const isCheckingActive = savedState !== null;
@@ -2840,27 +2811,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Tekshiruv faol bo'lmasa, tarixni ko'rsatish
             if (!isCheckingActive) {
-                // Joylashuv filtrini tekshirish
-                const locationSelect = document.getElementById('locationSelect');
-                const selectedLocation = locationSelect ? locationSelect.options[locationSelect.selectedIndex]?.text : null;
-                let filteredHistory = history;
-                
-                if (selectedLocation && selectedLocation !== 'Joylashuvni tanlang...') {
-                    filteredHistory = history.filter(item => item.location === selectedLocation);
-                }
-                
-                // Faqat filtrlangan tarix mavjud bo'lsa ko'rsatish
-                if (filteredHistory.length > 0) {
-                    showHistorySection();
-                    console.log('✅ Tarix bo\'limi ko\'rsatildi');
-                } else {
-                    console.log('⏸️ Filtrlangan tarix bo\'sh, tarix ko\'rsatilmaydi');
-                }
+                showHistorySection();
+                console.log('✅ Tarix bo\'limi ko\'rsatildi');
             } else {
                 console.log('⏸️ Tekshiruv faol, tarix yashirilgan');
             }
+            
+            // Tarix jadvalini filtrlash
+            refreshHistoryTable();
         } else {
-            console.log('📊 Tarix bo\'sh, tarix bo\'limi ko\'rsatilmaydi');
+            console.log('📊 Tarix bo\'sh');
         }
     }, 500);
 });
